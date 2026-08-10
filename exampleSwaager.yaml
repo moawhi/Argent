@@ -1,0 +1,3633 @@
+openapi: 3.0.0
+info:
+  title: AdLogic API
+  description: API for AdLogic tracking and reporting system
+  version: 1.0.0
+  contact:
+    name: AdLogic Support
+
+servers:
+  - url: http://localhost:8080
+    description: Local development server
+  - url: https://adlogic-dev.parklogic.net
+    description: Development server
+  - url: https://adlogic.parklogic.net
+    description: Production server
+
+paths:
+  /api/accounts:
+    get:
+      summary: Get all Accounts
+      tags:
+        - Accounts
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      responses:
+        '200':
+          description: List of Accounts
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of account list
+                example: |
+                  accountId,name,balance
+                  1,"test account 1",10.0
+                  2,"test account 2",-5.4
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/accounts/{id}:
+    get:
+      summary: Get Account by Account ID
+      tags:
+        - Accounts
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      responses:
+        '200':
+          description: Account details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of account list
+                example: |
+                  accountId,name,balance
+                  1,"test account 1",10.0
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/accounts/{id}/transactions:
+    get:
+      summary: Get Account transactions by Account ID
+      tags:
+        - Accounts
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      responses:
+        '200':
+          description: Account transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountTransactions'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of account list
+                example: |
+                  accountTransactionId,productId,accountId,typeId,amount,description,externalTransactionId,externalTransactionData,datetimeTransaction
+                  1,2,1,1,5.99,"testing",,,"2025-01-15 10:30:00"
+                  2,2,1,2,-3.00,,,,"2025-01-15 11:00:00"
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new account transaction (deposit/withdrawal)
+      tags:
+        - Accounts
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - typeId
+                - amount
+              properties:
+                productId:
+                  type: integer
+                  description: Product ID from transactionProduct table (defaults to 2 for AdLogic)
+                  default: 2
+                  example: 2
+                typeId:
+                  type: integer
+                  description: Transaction type ID from transactionType table
+                  example: 1
+                amount:
+                  type: number
+                  format: float
+                  description: Transaction amount (positive number, sign determined by typeId)
+                  minimum: 0
+                  exclusiveMinimum: true
+                description:
+                  type: string
+                  description: Optional description of the transaction
+                externalTransactionId:
+                  type: string
+                  description: Optional external transaction identifier
+                  nullable: true
+                externalTransactionData:
+                  type: string
+                  description: Optional external transaction data (JSON or text)
+                  nullable: true
+                datetimeTransaction:
+                  type: string
+                  format: date-time
+                  description: Transaction datetime (defaults to datetimeCreated if not supplied)
+                  nullable: true
+      responses:
+        '201':
+          description: Transaction created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Transaction created successfully
+                  transaction:
+                    $ref: '#/components/schemas/AccountTransactions'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/accounts/{id}/transaction-history/pdf:
+    get:
+      summary: Get transaction history PDF invoice for account
+      tags:
+        - Accounts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: PDF invoice document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+                description: PDF document containing transaction history statement
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/accounts/{id}/credit-advice/pdf:
+    get:
+      summary: Get monthly transaction Credit Advice PDF for account
+      tags:
+        - Accounts
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+        - name: startDate
+          in: query
+          required: false
+          description: Start date (YYYY-MM-DD). Required if endDate is provided. If not provided, use date parameter instead.
+          schema:
+            type: string
+            format: date
+        - name: endDate
+          in: query
+          required: false
+          description: End date (YYYY-MM-DD). Required if startDate is provided. If not provided, use date parameter instead.
+          schema:
+            type: string
+            format: date
+        - name: date
+          in: query
+          required: false
+          description: Single date (YYYY-MM-DD). If provided, startDate will be set to the first day of that month and endDate will be set to this date. Alternative to using startDate and endDate.
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Credit Advice PDF document
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+                description: PDF document containing Credit Advice statement
+        '400':
+          description: Invalid parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/accounts/{accountId}/transfer/{campaignId}:
+    post:
+      summary: Transfer funds between an account and a campaign
+      tags:
+        - Accounts
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountId
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+        - name: campaignId
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+                - typeId
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  description: Amount to transfer (positive number)
+                  minimum: 0
+                  exclusiveMinimum: true
+                typeId:
+                  type: integer
+                  description: Transfer direction type (2 = Deposit to Campaign, 4 = Withdrawal from Campaign)
+                  enum: [2, 4]
+                description:
+                  type: string
+                  description: Optional custom description. If omitted, API auto-generates a descriptive message with campaign name and ID.
+                  example: "Deposit fund into campaign Summer Push (ID: 123)"
+      responses:
+        '200':
+          description: Transfer completed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Transfer completed successfully
+                  typeId:
+                    type: integer
+                    description: Applied transfer direction type ID
+                    enum: [2, 4]
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Campaign does not belong to this account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /api/accounts/{accountId}/blockedSubIds:
+    get:
+      summary: Get a list of hashed blocked subIds for a given account
+      tags:
+        - Accounts
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Account blocked SubIds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/blockedSubIdsAccount'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of blocked subIds
+                example: |
+                  subId
+                  4cha.org,
+                  0ebb.at
+        '404':
+          description: Account not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Add new blocked subIds to an account
+      tags:
+        - Accounts
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subIds
+              properties:
+                subIds:
+                  type: string
+                  description: List of subIds to block for this account
+      responses:
+        '201':
+          description: SubIds blocked successfully for this account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: SubIds blocked successfully for this account
+                  transaction:
+                    $ref: '#/components/schemas/blockedSubIdsAccount'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Remove existing blocked subIds from an account
+      tags:
+        - Accounts
+      parameters:
+        - name: accountId
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subIds
+              properties:
+                subIds:
+                  type: string
+                  description: List of subIds to unblock for this account
+      responses:
+        '201':
+          description: SubIds unblocked successfully for this account
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: SubIds unblocked successfully for this account
+                  transaction:
+                    $ref: '#/components/schemas/blockedSubIdsAccount'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/account-groups:
+    get:
+      summary: Get all account groups
+      tags:
+        - Account Groups
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      responses:
+        '200':
+          description: List of account groups
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountGroup'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of account group list
+                example: |
+                  accountGroupId,name,type,terms,commissionRate,discount,notificationEmail,active,balance,modifiedByUserId
+                  1,"Managed Group",managed,1000.0,10.0,5.0,"alerts@example.com",true,500.0,
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new account group
+      tags:
+        - Account Groups
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Name of the account group
+                type:
+                  type: string
+                  description: Group type
+                  enum: [ managed, aggregate ]
+                  default: managed
+                terms:
+                  type: number
+                  format: float
+                  description: Low-balance threshold for managed groups (required when type is managed)
+                  nullable: true
+                commissionRate:
+                  type: number
+                  format: float
+                  description: Group-level commission rate (0-100)
+                  nullable: true
+                  minimum: 0
+                  maximum: 100
+                discount:
+                  type: number
+                  format: float
+                  description: Group-level discount percentage (0-100)
+                  nullable: true
+                  minimum: 0
+                  maximum: 100
+                notificationEmail:
+                  type: string
+                  description: Email address for low-balance alerts
+                  nullable: true
+      responses:
+        '201':
+          description: Account group created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountGroup'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/account-groups/{accountGroupId}:
+    get:
+      summary: Get account group by ID
+      tags:
+        - Account Groups
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountGroupId
+          in: path
+          required: true
+          description: Account Group ID
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      responses:
+        '200':
+          description: Account group details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountGroup'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of account group
+                example: |
+                  accountGroupId,name,type,terms,commissionRate,discount,notificationEmail,active,balance,modifiedByUserId
+                  1,"Managed Group",managed,1000.0,10.0,5.0,"alerts@example.com",true,500.0,
+        '404':
+          description: Account group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update an account group
+      tags:
+        - Account Groups
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountGroupId
+          in: path
+          required: true
+          description: Account Group ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the account group
+                type:
+                  type: string
+                  description: Group type
+                  enum: [ managed, aggregate ]
+                terms:
+                  type: number
+                  format: float
+                  description: Low-balance threshold for managed groups
+                  nullable: true
+                commissionRate:
+                  type: number
+                  format: float
+                  description: Group-level commission rate (0-100)
+                  nullable: true
+                  minimum: 0
+                  maximum: 100
+                discount:
+                  type: number
+                  format: float
+                  description: Group-level discount percentage (0-100)
+                  nullable: true
+                  minimum: 0
+                  maximum: 100
+                notificationEmail:
+                  type: string
+                  description: Email address for low-balance alerts
+                  nullable: true
+                active:
+                  type: boolean
+                  description: Whether the account group is active
+      responses:
+        '200':
+          description: Account group updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccountGroup'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Account group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/account-groups/{accountGroupId}/accounts:
+    get:
+      summary: Get all accounts in an account group
+      tags:
+        - Accounts
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountGroupId
+          in: path
+          required: true
+          description: Account Group ID
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      responses:
+        '200':
+          description: List of accounts in the group
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Account'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of account list
+                example: |
+                  accountId,name,balance,commissionRate,discount
+                  1,"test account 1",10.0,,
+                  2,"test account 2",-5.4,,
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new account in an account group
+      tags:
+        - Accounts
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountGroupId
+          in: path
+          required: true
+          description: Account Group ID
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+              properties:
+                name:
+                  type: string
+                  description: Name of the account
+                commissionRate:
+                  type: number
+                  format: float
+                  description: Account-level commission rate (0-100). Null means no override.
+                  nullable: true
+                  minimum: 0
+                  maximum: 100
+                discount:
+                  type: number
+                  format: float
+                  description: Account-level discount percentage (0-100). Null means no override.
+                  nullable: true
+                  minimum: 0
+                  maximum: 100
+                plAccountId:
+                  type: integer
+                  description: Optional PL account ID mapping
+                  nullable: true
+      responses:
+        '201':
+          description: Account created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Account'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of created account
+                example: |
+                  accountId,name,balance,commissionRate,discount
+                  3,"new account",0.0,,
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Account group not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/account-groups/{accountGroupId}/transactions:
+    get:
+      summary: Get account group transactions
+      tags:
+        - Account Groups
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountGroupId
+          in: path
+          required: true
+          description: Account Group ID
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [ json, csv ]
+            default: json
+      responses:
+        '200':
+          description: List of account group transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/AccountGroupTransaction'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of account group transactions
+                example: |
+                  accountGroupTransactionId,accountGroupId,accountTransactionId,amount,type,description,datetimeCreated,modifiedByUserId
+                  1,1,,500.0,invoice,"Initial deposit","2025-01-15 10:30:00",
+                  2,1,42,-50.0,debit,"User account deposit","2025-01-16 11:00:00",
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create an invoice transaction for a managed account group
+      description: Adds a positive deposit to a managed account group. Not supported for aggregate groups.
+      tags:
+        - Account Groups
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountGroupId
+          in: path
+          required: true
+          description: Account Group ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - amount
+              properties:
+                amount:
+                  type: number
+                  format: float
+                  description: Invoice amount (must be a positive number)
+                  minimum: 0
+                  exclusiveMinimum: true
+                description:
+                  type: string
+                  description: Optional description of the transaction
+                  nullable: true
+      responses:
+        '201':
+          description: Transaction created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Transaction created successfully
+                  transaction:
+                    $ref: '#/components/schemas/AccountGroupTransaction'
+        '422':
+          description: Validation error (e.g. group not found, unsupported group type, invalid amount)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns:
+    get:
+      summary: Get all campaigns
+      description: Authenticated endpoint; admin rights are not required.
+      tags:
+        - Campaigns
+      parameters:
+        - name: filterBy
+          in: query
+          required: false
+          description: "JSON object or comma-separated key:value pairs to filter results by multiple fields (e.g., '{\"status\":\"active\",\"balance\":0,\"balanceCmp\":\"lte\"}' or 'status:active,balance:0,balanceCmp:lte'). Allowed keys: status,outOfBudget,balance,balanceCmp,trafficRate,name,timezone,dailyBudget,dailyBudgetCmp"
+          schema:
+            type: string
+        - name: sortBy
+          in: query
+          required: false
+          description: "Comma-separated fields with optional :asc|:desc (or JSON array). Example: 'name:asc,balance:desc,allTimeRedirects:desc,allTimeBids:desc,allTimeSpend:desc,averageCPM:desc'"
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID to filter campaigns
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+        - name: status
+          in: query
+          required: false
+          description: Filter by campaign status derived from enabled flags (active|paused)
+          schema:
+            type: string
+            enum: [active, paused]
+        - name: balance
+          in: query
+          required: false
+          description: Balance amount to compare against when used with balanceCmp
+          schema:
+            type: number
+        - name: balanceCmp
+          in: query
+          required: false
+          description: Comparison operator for balance (one of lt,lte,gt,gte,eq)
+          schema:
+            type: string
+            enum: [lt, lte, gt, gte, eq]
+        - name: outOfBudget
+          in: query
+          required: false
+          description: When true, only campaigns with balance < 0 are returned
+          schema:
+            type: boolean
+        - name: trafficRate
+          in: query
+          required: false
+          description: Filter by traffic rate (e.g., accelerated)
+          schema:
+            type: string
+        - name: name
+          in: query
+          required: false
+          description: Case-insensitive substring match on campaign name
+          schema:
+            type: string
+        - name: timezone
+          in: query
+          required: false
+          description: Exact match on timezone
+          schema:
+            type: string
+        - name: dailyBudget
+          in: query
+          required: false
+          description: Daily budget amount to compare against when used with dailyBudgetCmp
+          schema:
+            type: number
+        - name: dailyBudgetCmp
+          in: query
+          required: false
+          description: Comparison operator for dailyBudget (one of lt,lte,gt,gte,eq)
+          schema:
+            type: string
+            enum: [lt, lte, gt, gte, eq]
+
+      responses:
+        '200':
+          description: List of campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Campaign'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of campaigns list
+                example: |
+                  campaignId,accountId,name,timezone,dailyBudget,cpc,plAccountId,url,includeSubId,remnantTrafficOnly,remnantTrafficThreshold,filteringCountry,filteringCity,filteringOs,filteringBrowserType,filteringDeviceType,filteringCategory,filteringKeyword,enabledByInterface,enabledBySystem,active,trackingEnabled
+                  1,1,"Campaign 1","Australia/Melbourne",100.00,0.05,515,"http://example.com",true,true,0.01,"disabled","disabled","disabled","disabled","disabled","disabled","disabled",true,true,true,1
+                  2,1,"Campaign 2","Australia/Melbourne",200.00,0.10,null,"http://example2.com",true,false,0.01,"disabled","disabled","disabled","disabled","disabled","disabled","disabled",true,true,true,0
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Create a new campaign
+      description: Requires admin rights from authenticated user group
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID to assign campaign
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - url
+                - cpc
+              properties:
+                accountId:
+                  type: integer
+                  description: ID of the account this campaign belongs to
+                name:
+                  type: string
+                  description: Name of the campaign
+                timezone:
+                  type: string
+                  description: Timezone for the campaign (defaults to Australia/Melbourne)
+                  default: Australia/Melbourne
+                dailyBudget:
+                  type: number
+                  format: float
+                  description: Daily budget for the campaign
+                  minimum: 0
+                cpc:
+                  type: number
+                  format: float
+                  description: Cost per click for the campaign
+                  minimum: 0
+                  exclusiveMinimum: true
+                plAccountId:
+                  type: integer
+                  description: The PL account ID this Adlogic campaign is mapped to.
+                  default: null
+                url:
+                  type: string
+                  description: Target URL for the campaign
+                includeSubId:
+                  type: boolean
+                  default: false
+                  description: Whether to include the SubID as part of the campaign's url
+                remnantTrafficOnly:
+                  type: boolean
+                  default: false
+                  description: Whether this campaign is only eligible to be chosen if the other bids are lower than the given threshold.
+                remnantTrafficThreshold:
+                  type: number
+                  format: float
+                  description: The amount the second-highest bid must be lower than to qualify for adlogic.
+                  minimum: 0.0
+                filteringCountry:
+                  type: string
+                  enum: [disabled, include, exclude]
+                  default: disabled
+                  description: Country filtering mode
+                filteringCity:
+                  type: string
+                  enum: [disabled, include, exclude]
+                  default: disabled
+                  description: City filtering mode
+                filteringOs:
+                  type: string
+                  enum: [disabled, include, exclude]
+                  default: disabled
+                  description: OS filtering mode
+                filteringBrowserType:
+                  type: string
+                  enum: [disabled, include, exclude]
+                  default: disabled
+                  description: Browser type filtering mode
+                filteringDeviceType:
+                  type: string
+                  enum: [disabled, include, exclude]
+                  default: disabled
+                  description: Device type filtering mode
+                filteringCategory:
+                  type: string
+                  enum: [disabled, include, exclude]
+                  default: disabled
+                  description: Category filtering mode
+                filteringKeyword:
+                  type: string
+                  enum: [disabled, include, exclude]
+                  default: disabled
+                  description: Keyword filtering mode
+                enabledByInterface:
+                  type: boolean
+                  default: true
+                  description: Whether the campaign is enabled by the user interface
+                enabledBySystem:
+                  type: boolean
+                  default: true
+                  description: Whether the campaign is enabled by the system
+                active:
+                  type: boolean
+                  default: true
+                  description: Whether the campaign is active
+                trackingEnabled:
+                  type: boolean
+                  default: true
+                  description: Whether tracking is enabled for this campaign
+                startDate:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Campaign start date/time. NULL means from the start of time. Send empty string to clear the date.
+                stopDate:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Campaign stop date/time. NULL means no end date. Send empty string to clear the date.
+                countries:
+                  type: array
+                  items:
+                    type: string
+                  description: List of countries to include/exclude
+                cities:
+                  type: array
+                  items:
+                    type: string
+                  description: List of cities to include/exclude
+                os:
+                  type: array
+                  items:
+                    type: string
+                  description: List of operating systems to include/exclude
+                browserTypes:
+                  type: array
+                  items:
+                    type: integer
+                  description: List of browser types to include/exclude
+                deviceTypes:
+                  type: array
+                  items:
+                    type: integer
+                  description: List of device types to include/exclude
+                categories:
+                  type: array
+                  items:
+                    type: string
+                  description: List of categories to include/exclude
+                keywords:
+                  type: array
+                  items:
+                    type: string
+                  description: List of keywords to include/exclude
+      responses:
+        '201':
+          description: Campaign created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Campaign created successfully
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of created campaign
+                example: |
+                  campaignId,accountId,name,timezone,dailyBudget,cpc,plAccountId,url,includeSubId,remnantTrafficOnly,remnantTrafficThreshold,filteringCountry,filteringCity,filteringOs,filteringBrowserType,filteringDeviceType,filteringCategory,filteringKeyword,enabledByInterface,enabledBySystem,active,trackingEnabled
+                  1,1,"New Campaign","Australia/Melbourne",100.00,0.05,515,"http://example.com",true,true,0.01,"disabled","disabled","disabled","disabled","disabled","disabled","disabled",true,true,true,1
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{id}:
+    get:
+      summary: Get campaign by ID
+      description: Authenticated endpoint; admin rights are not required.
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID that owns the campaign (required)
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: Campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of campaign details
+                example: |
+                  campaignId,accountId,name,timezone,dailyBudget,cpc,plAccountId,url,includeSubId,remnantTrafficOnly,remnantTrafficThreshold,filteringCountry,filteringCity,filteringOs,filteringBrowserType,filteringDeviceType,filteringCategory,filteringKeyword,enabledByInterface,enabledBySystem,active,trackingEnabled
+                  1,1,"Sample Campaign","Australia/Melbourne",100.00,0.05,515,"http://example.com",true,true,0.01,"disabled","disabled","disabled","disabled","disabled","disabled","disabled",true,true,true,1
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    put:
+      summary: Update a campaign
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID that owns the campaign (required)
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  description: Name of the campaign
+                timezone:
+                  type: string
+                  description: Timezone for the campaign (defaults to Australia/Melbourne)
+                  default: Australia/Melbourne
+                dailyBudget:
+                  type: number
+                  format: float
+                  description: Daily budget for the campaign
+                  minimum: 0
+                cpc:
+                  type: number
+                  format: float
+                  description: Cost per click for the campaign
+                  minimum: 0
+                  exclusiveMinimum: true
+                plAccountId:
+                  type: integer
+                  description: The PL account ID this Adlogic campaign is mapped to.
+                  default: null
+                url:
+                  type: string
+                  description: Target URL for the campaign
+                includeSubId:
+                  type: boolean
+                  default: false
+                  description: Whether to include the SubID as part of the campaign's url
+                remnantTrafficOnly:
+                  type: boolean
+                  default: false
+                  description: Whether this campaign is only eligible to be chosen if the other bids are lower than the given threshold.
+                remnantTrafficThreshold:
+                  type: number
+                  format: float
+                  description: The amount the second-highest bid must be lower than to qualify for adlogic.
+                  minimum: 0.0
+                filteringCountry:
+                  type: string
+                  enum: [ disabled, include, exclude ]
+                  default: disabled
+                  description: Country filtering mode
+                filteringCity:
+                  type: string
+                  enum: [ disabled, include, exclude ]
+                  default: disabled
+                  description: City filtering mode
+                filteringOs:
+                  type: string
+                  enum: [ disabled, include, exclude ]
+                  default: disabled
+                  description: OS filtering mode
+                filteringBrowserType:
+                  type: string
+                  enum: [ disabled, include, exclude ]
+                  default: disabled
+                  description: Browser type filtering mode
+                filteringDeviceType:
+                  type: string
+                  enum: [ disabled, include, exclude ]
+                  default: disabled
+                  description: Device type filtering mode
+                filteringCategory:
+                  type: string
+                  enum: [ disabled, include, exclude ]
+                  default: disabled
+                  description: Category filtering mode
+                filteringKeyword:
+                  type: string
+                  enum: [ disabled, include, exclude ]
+                  default: disabled
+                  description: Keyword filtering mode
+                enabledByInterface:
+                  type: boolean
+                  default: true
+                  description: Whether the campaign is enabled by the user interface
+                enabledBySystem:
+                  type: boolean
+                  default: true
+                  description: Whether the campaign is enabled by the system
+                active:
+                  type: boolean
+                  default: true
+                  description: Whether the campaign is active
+                trackingEnabled:
+                    type: boolean
+                    default: true
+                    description: Whether tracking is enabled for this campaign
+                startDate:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Campaign start date/time. NULL means from the start of time. Send empty string to clear the date.
+                stopDate:
+                  type: string
+                  format: date-time
+                  nullable: true
+                  description: Campaign stop date/time. NULL means no end date. Send empty string to clear the date.
+                countries:
+                  type: array
+                  items:
+                    type: string
+                  description: List of countries to include/exclude
+                cities:
+                  type: array
+                  items:
+                    type: string
+                  description: List of cities to include/exclude
+                os:
+                  type: array
+                  items:
+                    type: string
+                  description: List of operating systems to include/exclude
+                browserTypes:
+                  type: array
+                  items:
+                    type: integer
+                  description: List of browser types to include/exclude
+                deviceTypes:
+                  type: array
+                  items:
+                    type: integer
+                  description: List of device types to include/exclude
+                categories:
+                  type: array
+                  items:
+                    type: string
+                  description: List of categories to include/exclude
+                keywords:
+                  type: array
+                  items:
+                    type: string
+                  description: List of keywords to include/exclude
+      responses:
+        '200':
+          description: Campaign updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of updated campaign
+                example: |
+                  campaignId,accountId,name,timezone,dailyBudget,cpc,plAccountId,url,includeSubId,remnantTrafficOnly,remnantTrafficThreshold,filteringCountry,filteringCity,filteringOs,filteringBrowserType,filteringDeviceType,filteringCategory,filteringKeyword,enabledByInterface,enabledBySystem,status,active,trackingEnabled
+                  1,1,"Updated Campaign","Australia/Melbourne",200.00,0.10,515,"http://example.com",true,true,0.01,"disabled","disabled","disabled","disabled","disabled","disabled","disabled",true,true,true,true,1
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: Delete a campaign
+      description: Sets the campaign as inactive and transfers remaining balance back to the account. Requires admin rights from authenticated user group.
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID that owns the campaign (required)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Campaign deleted successfully and balance transferred to account
+                  campaign:
+                    $ref: '#/components/schemas/Campaign'
+                  transferredAmount:
+                    type: number
+                    format: float
+                    description: Amount transferred back to account
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/archived:
+    get:
+      summary: Get archived campaigns
+      description: Returns archived campaigns. Admin users can omit accountId to get all archived campaigns across all accounts.
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID. Required for non-admin users. Admin users can omit to retrieve all archived campaigns.
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: List of archived campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Campaign'
+        '400':
+          description: Missing required parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/archived/{id}:
+    get:
+      summary: Get a single archived campaign by ID
+      description: Returns one archived campaign by its ID. Non-admin users must provide accountId to confirm ownership.
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID (required for non-admin users)
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Archived campaign details
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Campaign'
+        '400':
+          description: Missing required parameter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Campaign does not belong to this account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Archived campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{id}/archive:
+    post:
+      summary: Archive a campaign
+      description: Soft-archives a campaign, hiding it from active campaign listings and disabling traffic (sets enabledByInterface and enabledBySystem to false). Balance is preserved.
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: true
+          description: Account ID that owns the campaign
+          schema:
+            type: integer
+        - name: apiu
+          in: query
+          required: false
+          description: ID of the user performing the action
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign archived successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Campaign archived successfully
+        '400':
+          description: Invalid request (e.g. already archived)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Campaign does not belong to this account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{id}/unarchive:
+    post:
+      summary: Unarchive a campaign
+      description: Restores a soft-archived campaign back to the active campaign listing. Sets enabledBySystem to true; enabledByInterface is unchanged (user must re-enable manually).
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: true
+          description: Account ID that owns the campaign
+          schema:
+            type: integer
+        - name: apiu
+          in: query
+          required: false
+          description: ID of the user performing the action
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign unarchived successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: Campaign unarchived successfully
+        '400':
+          description: Invalid request (e.g. not archived)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Campaign does not belong to this account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{id}/transactions:
+    get:
+      summary: Get all transactions for a campaign
+      description: Authenticated endpoint; admin rights are not required.
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: id
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: false
+          description: Account ID that owns the campaign (optional, but when provided must own the campaign)
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: List of campaign transactions
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/CampaignTransaction'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of campaign transactions
+                example: |
+                  campaignTransactionId,accountTransactionId,accountId,campaignSpendId,campaignId,amount,description,date,datetimeCreated,datetimeModified
+                  1,10,1,,123,10.50,"Campaign spend",2025-05-20,"2025-05-20 10:30:00","2025-05-20 10:30:00"
+                  2,11,1,,123,25.75,"Manual deposit",2025-05-19,"2025-05-19 15:45:00","2025-05-19 15:45:00"
+        '403':
+          description: Forbidden - Campaign does not belong to this account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{accountId}/date-active:
+    get:
+      summary: Get campaigns that are currently active based on their date range
+      description: Authenticated endpoint; admin rights are not required.
+      tags:
+        - Campaigns
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountId
+          in: path
+          required: true
+          description: Account ID
+          schema:
+            type: integer
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: List of date-active campaigns
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Campaign'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of date-active campaigns list
+                example: |
+                  campaignId,accountId,name,timezone,dailyBudget,cpc,plAccountId,url,includeSubId,remnantTrafficOnly,remnantTrafficThreshold,filteringCountry,filteringCity,filteringOs,filteringBrowserType,filteringDeviceType,filteringCategory,filteringKeyword,enabledByInterface,enabledBySystem,active,trafficRate,balance,startDate,stopDate
+                  1,1,"Active Campaign","Australia/Melbourne",100.00,0.05,515,"http://example.com",true,true,0.01,"disabled","disabled","disabled","disabled","disabled","disabled","disabled",true,true,true,accelerated,50.00,"2025-01-01T00:00:00Z","2025-12-31T23:59:59Z"
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/campaigns/{campaignId}/blockedSubIds:
+    get:
+      summary: Get a list of hashed blocked subIds for a given campaign
+      description: Authenticated endpoint; admin rights are not required.
+      tags:
+        - Campaigns
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Campaign blocked SubIds
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/blockedSubIdsCampaign'
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of blocked subIds
+                example: |
+                  subId
+                  4cha.org,
+                  0ebb.at
+        '404':
+          description: Campaign not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    post:
+      summary: Add new blocked subIds to an campaign
+      description: Requires admin rights from authenticated user group.
+      tags:
+        - Campaigns
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subIds
+              properties:
+                subIds:
+                  type: string
+                  description: List of subIds to block for this campaign
+      responses:
+        '201':
+          description: SubIds blocked successfully for this campaign
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: SubIds blocked successfully for this campaign
+                  transaction:
+                    $ref: '#/components/schemas/blockedSubIdsCampaign'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+    delete:
+      summary: remove existing blocked subIds from an campaign
+      description: Requires admin rights from authenticated user group.
+      tags:
+        - Campaigns
+      parameters:
+        - name: campaignId
+          in: path
+          required: true
+          description: Campaign ID
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - subIds
+              properties:
+                subIds:
+                  type: string
+                  description: List of subIds to unblock for this campaign
+      responses:
+        '201':
+          description: SubIds unblocked successfully for this campaign
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: SubIds unblocked successfully for this campaign
+                  transaction:
+                    $ref: '#/components/schemas/blockedSubIdsCampaign'
+        '400':
+          description: Invalid input data
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/reports/traffic-provider:
+    get:
+      summary: Get traffic provider report
+      tags:
+        - Reports
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: accountId
+          in: query
+          required: false
+          description: Optional account ID. If not provided, returns data for all accounts
+          schema:
+            type: integer
+        - name: fromDate
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: timezone
+          in: query
+          required: false
+          description: Timezone (default Australia/Melbourne)
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: Traffic provider report
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - fromDate
+                  - toDate
+                  - timezone
+                  - stats
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                    description: Start date of the report period
+                  toDate:
+                    type: string
+                    format: date
+                    description: End date of the report period
+                  timezone:
+                    type: string
+                    description: Timezone used for the report
+                  stats:
+                    type: object
+                    description: Statistics grouped by date, where each key is a date in YYYY-MM-DD format
+                    example:
+                      "2025-01-01":
+                        - subId: "sub1"
+                          views: 1000
+                          revenue: 25.50
+                        - subId: "sub2"
+                          views: 2000
+                          revenue: 50.75
+                      "2025-01-02":
+                        - subId: "sub1"
+                          views: 1500
+                          revenue: 37.25
+                    additionalProperties:
+                      type: array
+                      description: Array of statistics for each subId on the given date (YYYY-MM-DD)
+                      items:
+                        type: object
+                        required:
+                          - subId
+                          - views
+                          - revenue
+                        properties:
+                          subId:
+                            type: string
+                            description: Sub-identifier for the traffic source
+                          views:
+                            type: integer
+                            description: Number of views/impressions
+                            minimum: 0
+                          revenue:
+                            type: number
+                            format: float
+                            description: Revenue generated in the specified currency
+                            minimum: 0
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of traffic provider report
+                example: |
+                  date,subId,views,clicks,numberOfBids,revenue
+                  2025-01-01,sub1,1000,800,1200,25.50
+                  2025-01-01,sub2,2000,1500,2200,50.75
+                  2025-01-02,sub1,1500,1200,1600,37.25
+        '400':
+          description: Bad request - Missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/reports/traffic-purchaser:
+    get:
+      summary: Get traffic purchaser report
+      tags:
+        - Reports
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: campaignId
+          in: query
+          required: false
+          description: Optional campaign ID. If not provided, returns data for all campaigns
+          schema:
+            type: integer
+        - name: accountId
+          in: query
+          required: false
+          description: Optional account ID. If provided with campaignId, validates that campaign belongs to this account
+          schema:
+            type: integer
+        - name: fromDate
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: format
+          in: query
+          required: false
+          description: Response format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+        - name: showAllDate
+          in: query
+          required: false
+          description: Include dates with no data (default is false)
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Traffic purchaser report
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - fromDate
+                  - toDate
+                  - stats
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                    description: Start date of the report period
+                  toDate:
+                    type: string
+                    format: date
+                    description: End date of the report period
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - campaignId
+                        - date
+                        - quantityOfBids
+                        - quantityOfRedirects
+                        - averageCpm
+                        - dailyCost
+                        - dailyBudget
+                        - budgetUsedPercentage
+                      properties:
+                        campaignId:
+                          type: integer
+                          description: ID of the campaign
+                        date:
+                          type: string
+                          format: date
+                          description: Date of the statistics
+                        quantityOfBids:
+                          type: integer
+                          description: Number of bids made for the campaign
+                          minimum: 0
+                        quantityOfRedirects:
+                          type: integer
+                          description: Number of bids won and redirected
+                          minimum: 0
+                        averageCpm:
+                          type: number
+                          format: float
+                          description: Average CPM charged per day
+                          minimum: 0
+                        dailyCost:
+                          type: number
+                          format: float
+                          description: Cost charged per day
+                          minimum: 0
+                        dailyBudget:
+                          type: number
+                          format: float
+                          description: Daily budget for the campaign
+                          minimum: 0
+                        budgetUsedPercentage:
+                          type: number
+                          format: float
+                          description: Percentage of daily budget used
+                          minimum: 0
+                          maximum: 100
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of traffic purchaser report
+                example: |
+                  campaignId,date,quantityOfBids,quantityOfRedirects,averageCpm,dailyCost,dailyBudget,budgetUsedPercentage
+                  1,2025-01-01,1000,800,2.50,25.00,100.00,25.00
+                  1,2025-01-02,1200,900,2.75,30.00,100.00,30.00
+                  2,2025-01-01,800,600,3.00,20.00,50.00,40.00
+        '400':
+          description: Bad request - Missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '403':
+          description: Forbidden - Campaign does not belong to this account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/reports/commission:
+    get:
+      summary: Get commission report data
+      tags:
+        - Commission Reports
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: fromDate
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: accountId
+          in: query
+          required: false
+          description: Optional account ID filter
+          schema:
+            type: integer
+        - name: campaignId
+          in: query
+          required: false
+          description: Optional campaign ID filter
+          schema:
+            type: integer
+        - name: timezone
+          in: query
+          required: false
+          description: Timezone (default UTC)
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          description: Output format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: Commission report data
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - fromDate
+                  - toDate
+                  - timezone
+                  - stats
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                    description: Start date of the report period
+                  toDate:
+                    type: string
+                    format: date
+                    description: End date of the report period
+                  timezone:
+                    type: string
+                    description: Timezone used for the report
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - date
+                        - accountId
+                        - campaignId
+                        - redirects
+                        - total_cost
+                        - commission_earned
+                        - commission_rate
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                          description: Date of the statistics
+                        accountId:
+                          type: integer
+                          description: ID of the account
+                        campaignId:
+                          type: integer
+                          description: ID of the campaign
+                        redirects:
+                          type: integer
+                          description: Number of redirects
+                          minimum: 0
+                        total_cost:
+                          type: number
+                          format: float
+                          description: Total cost for the day
+                          minimum: 0
+                        commission_earned:
+                          type: number
+                          format: float
+                          description: Commission earned for the day
+                          minimum: 0
+                        commission_rate:
+                          type: number
+                          format: float
+                          description: Effective commission rate percentage
+                          minimum: 0
+                          maximum: 100
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of commission report
+                example: |
+                  date,accountId,campaignId,redirects,total_cost,commission_earned,commission_rate
+                  2025-01-01,1,123,1000,50.00,10.00,20.00
+                  2025-01-01,2,456,800,40.00,8.00,20.00
+                  2025-01-02,1,123,1200,60.00,12.00,20.00
+        '400':
+          description: Bad request - Missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/reports/commission/daily:
+    get:
+      summary: Get daily commission summary
+      tags:
+        - Commission Reports
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: fromDate
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: timezone
+          in: query
+          required: false
+          description: Timezone (default UTC)
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          description: Output format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: Daily commission summary
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - fromDate
+                  - toDate
+                  - timezone
+                  - stats
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                    description: Start date of the report period
+                  toDate:
+                    type: string
+                    format: date
+                    description: End date of the report period
+                  timezone:
+                    type: string
+                    description: Timezone used for the report
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - date
+                        - total_redirects
+                        - total_cost
+                        - total_commission_earned
+                        - avg_commission_rate
+                      properties:
+                        date:
+                          type: string
+                          format: date
+                          description: Date of the statistics
+                        total_redirects:
+                          type: integer
+                          description: Total number of redirects across all campaigns
+                          minimum: 0
+                        total_cost:
+                          type: number
+                          format: float
+                          description: Total cost across all campaigns
+                          minimum: 0
+                        total_commission_earned:
+                          type: number
+                          format: float
+                          description: Total commission earned across all campaigns
+                          minimum: 0
+                        avg_commission_rate:
+                          type: number
+                          format: float
+                          description: Average commission rate percentage
+                          minimum: 0
+                          maximum: 100
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of daily commission summary
+                example: |
+                  date,total_redirects,total_cost,total_commission_earned,avg_commission_rate
+                  2025-01-01,1800,90.00,18.00,20.00
+                  2025-01-02,2000,100.00,20.00,20.00
+        '400':
+          description: Bad request - Missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/reports/commission/top-campaigns:
+    get:
+      summary: Get top earning campaigns by commission
+      tags:
+        - Commission Reports
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: fromDate
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          description: Number of top campaigns to return (default 20)
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: timezone
+          in: query
+          required: false
+          description: Timezone (default UTC)
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          description: Output format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: Top earning campaigns by commission
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - fromDate
+                  - toDate
+                  - timezone
+                  - limit
+                  - stats
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                    description: Start date of the report period
+                  toDate:
+                    type: string
+                    format: date
+                    description: End date of the report period
+                  timezone:
+                    type: string
+                    description: Timezone used for the report
+                  limit:
+                    type: integer
+                    description: Number of top campaigns returned
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - campaignId
+                        - accountId
+                        - redirects
+                        - total_cost
+                        - commission_earned
+                        - commission_rate
+                      properties:
+                        campaignId:
+                          type: integer
+                          description: ID of the campaign
+                        accountId:
+                          type: integer
+                          description: ID of the account
+                        redirects:
+                          type: integer
+                          description: Number of redirects
+                          minimum: 0
+                        total_cost:
+                          type: number
+                          format: float
+                          description: Total cost for the period
+                          minimum: 0
+                        commission_earned:
+                          type: number
+                          format: float
+                          description: Commission earned for the period
+                          minimum: 0
+                        commission_rate:
+                          type: number
+                          format: float
+                          description: Effective commission rate percentage
+                          minimum: 0
+                          maximum: 100
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of top earning campaigns
+                example: |
+                  campaignId,accountId,redirects,total_cost,commission_earned,commission_rate
+                  123,1,5000,250.00,50.00,20.00
+                  456,2,4000,200.00,40.00,20.00
+                  789,1,3000,150.00,30.00,20.00
+        '400':
+          description: Bad request - Missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/reports/commission/top-accounts:
+    get:
+      summary: Get top earning accounts by commission
+      tags:
+        - Commission Reports
+      parameters:
+        - name: apiu
+          in: query
+          required: true
+          description: API username
+          schema:
+            type: string
+        - name: apik
+          in: query
+          required: true
+          description: API key
+          schema:
+            type: string
+        - name: fromDate
+          in: query
+          required: true
+          description: Start date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: toDate
+          in: query
+          required: true
+          description: End date (YYYY-MM-DD)
+          schema:
+            type: string
+            format: date
+        - name: limit
+          in: query
+          required: false
+          description: Number of top accounts to return (default 20)
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+            maximum: 100
+        - name: timezone
+          in: query
+          required: false
+          description: Timezone (default UTC)
+          schema:
+            type: string
+        - name: format
+          in: query
+          required: false
+          description: Output format (json or csv)
+          schema:
+            type: string
+            enum: [json, csv]
+            default: json
+      responses:
+        '200':
+          description: Top earning accounts by commission
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                  - fromDate
+                  - toDate
+                  - timezone
+                  - limit
+                  - stats
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                    description: Start date of the report period
+                  toDate:
+                    type: string
+                    format: date
+                    description: End date of the report period
+                  timezone:
+                    type: string
+                    description: Timezone used for the report
+                  limit:
+                    type: integer
+                    description: Number of top accounts returned
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      required:
+                        - accountId
+                        - redirects
+                        - total_cost
+                        - commission_earned
+                        - commission_rate
+                      properties:
+                        accountId:
+                          type: integer
+                          description: ID of the account
+                        redirects:
+                          type: integer
+                          description: Number of redirects
+                          minimum: 0
+                        total_cost:
+                          type: number
+                          format: float
+                          description: Total cost for the period
+                          minimum: 0
+                        commission_earned:
+                          type: number
+                          format: float
+                          description: Commission earned for the period
+                          minimum: 0
+                        commission_rate:
+                          type: number
+                          format: float
+                          description: Effective commission rate percentage
+                          minimum: 0
+                          maximum: 100
+            text/plain:
+              schema:
+                type: string
+                description: CSV format of top earning accounts
+                example: |
+                  accountId,redirects,total_cost,commission_earned,commission_rate
+                  1,8000,400.00,80.00,20.00
+                  2,4000,200.00,40.00,20.00
+                  3,2000,100.00,20.00,20.00
+        '400':
+          description: Bad request - Missing required parameters
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '500':
+          description: Server error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+components:
+  schemas:
+    Error:
+      type: object
+      properties:
+        error:
+          type: string
+    Campaign:
+      type: object
+      required:
+        - campaignId
+        - accountId
+        - name
+        - url
+        - cpc
+      properties:
+        campaignId:
+          type: integer
+          description: Unique identifier for the campaign
+        accountId:
+          type: integer
+          description: ID of the account this campaign belongs to
+        name:
+          type: string
+          description: Name of the campaign
+        timezone:
+          type: string
+          description: Timezone for the campaign
+        dailyBudget:
+          type: number
+          format: float
+          description: Daily budget for the campaign
+          minimum: 0
+        cpc:
+          type: number
+          format: float
+          description: Cost per click for the campaign
+          minimum: 0
+          exclusiveMinimum: true
+        plAccountId:
+          type: integer
+          description: The PL account ID this Adlogic campaign is mapped to.
+          default: null
+        url:
+          type: string
+          description: Target URL for the campaign
+        commissionRate:
+          type: number
+          format: float
+          description: Campaign-level commission rate (0-100). Null means inherit.
+          nullable: true
+          minimum: 0
+          maximum: 100
+        discount:
+          type: number
+          format: float
+          description: Campaign-level discount percentage (0-100). Null means inherit.
+          nullable: true
+          minimum: 0
+          maximum: 100
+        includeSubId:
+          type: boolean
+          default: false
+          description: Whether to include the SubID as part of the campaign's url
+        remnantTrafficOnly:
+          type: boolean
+          default: false
+          description: Whether this campaign is only eligible to be chosen if the other bids are lower than the given threshold.
+        remnantTrafficThreshold:
+          type: number
+          format: float
+          description: The amount the second-highest bid must be lower than to qualify for adlogic.
+          minimum: 0.0
+        filteringCountry:
+          type: string
+          enum: [disabled, include, exclude]
+          description: Country filtering mode
+        filteringCity:
+          type: string
+          enum: [disabled, include, exclude]
+          description: City filtering mode
+        filteringOs:
+          type: string
+          enum: [disabled, include, exclude]
+          description: OS filtering mode
+        filteringBrowserType:
+          type: string
+          enum: [disabled, include, exclude]
+          description: Browser type filtering mode
+        filteringDeviceType:
+          type: string
+          enum: [disabled, include, exclude]
+          description: Device type filtering mode
+        filteringCategory:
+          type: string
+          enum: [disabled, include, exclude]
+          description: Category filtering mode
+        filteringKeyword:
+          type: string
+          enum: [disabled, include, exclude]
+          description: Keyword filtering mode
+        enabledByInterface:
+          type: boolean
+          description: Whether the campaign is enabled by the user interface
+        enabledBySystem:
+          type: boolean
+          description: Whether the campaign is enabled by the system
+        status:
+          type: string
+          enum: [active, paused]
+          description: Overall campaign status (active when both enabledByInterface and enabledBySystem are true, paused otherwise)
+        active:
+          type: boolean
+          description: Whether the campaign is active
+        trackingEnabled:
+            type: boolean
+            default: true
+            description: Whether tracking is enabled for this campaign
+        archived:
+          type: boolean
+          default: false
+          description: Whether the campaign has been soft-archived. Archived campaigns are hidden from active listings but data and balance are preserved.
+        startDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: Campaign start date/time. NULL means from the start of time
+        stopDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: Campaign stop date/time. NULL means no end date
+        balance:
+          type: number
+          format: float
+          description: The current balance of the campaign
+          nullable: true
+        allTimeRedirects:
+          type: integer
+          description: All-time number of redirects for this campaign
+          minimum: 0
+        allTimeBids:
+          type: integer
+          description: All-time number of bids for this campaign
+          minimum: 0
+        allTimeSpend:
+          type: number
+          format: float
+          description: All-time spend for this campaign (sum of parklogic_adlogic_bid_cost from tracking logs)
+          minimum: 0
+        averageCPM:
+          type: number
+          format: float
+          description: All-time average CPM computed as (allTimeSpend / allTimeRedirects) * 1000. Returns 0 when there are no redirects.
+          minimum: 0
+        countries:
+          type: array
+          items:
+            type: string
+          description: List of countries to include/exclude
+        cities:
+          type: array
+          items:
+            type: string
+          description: List of cities to include/exclude
+        os:
+          type: array
+          items:
+            type: string
+          description: List of operating systems to include/exclude
+        browserTypes:
+          type: array
+          items:
+            type: integer
+          description: List of browser types to include/exclude
+        deviceTypes:
+          type: array
+          items:
+            type: integer
+          description: List of device types to include/exclude
+        categories:
+          type: array
+          items:
+            type: string
+          description: List of categories to include/exclude
+        keywords:
+          type: array
+          items:
+            type: string
+          description: List of keywords to include/exclude
+    AccountGroup:
+      type: object
+      required:
+        - accountGroupId
+        - name
+        - type
+        - active
+        - balance
+      properties:
+        accountGroupId:
+          type: integer
+          description: Unique identifier for the account group
+        name:
+          type: string
+          description: Name of the account group
+        type:
+          type: string
+          description: Group type (managed groups hold a shared balance; aggregate groups sum member account balances)
+          enum: [ managed, aggregate ]
+        terms:
+          type: number
+          format: float
+          description: Low-balance threshold for managed groups
+          nullable: true
+        commissionRate:
+          type: number
+          format: float
+          description: Group-level commission rate (0-100)
+          nullable: true
+          minimum: 0
+          maximum: 100
+        discount:
+          type: number
+          format: float
+          description: Group-level discount percentage (0-100)
+          nullable: true
+          minimum: 0
+          maximum: 100
+        notificationEmail:
+          type: string
+          description: Email address for low-balance alerts
+          nullable: true
+        active:
+          type: boolean
+          description: Whether the account group is active
+        balance:
+          type: number
+          format: float
+          description: Current group balance (sum of group transactions for managed groups, sum of member account balances for aggregate groups)
+        modifiedByUserId:
+          type: integer
+          description: ID of the user who last modified this account group
+          nullable: true
+    AccountGroupTransaction:
+      type: object
+      required:
+        - accountGroupTransactionId
+        - accountGroupId
+        - amount
+        - type
+      properties:
+        accountGroupTransactionId:
+          type: integer
+          description: Unique identifier for the account group transaction
+        accountGroupId:
+          type: integer
+          description: ID of the account group this transaction belongs to
+        accountTransactionId:
+          type: integer
+          description: Linked account transaction ID (for debit transactions)
+          nullable: true
+        amount:
+          type: number
+          format: float
+          description: Transaction amount (positive for invoices/commissions, negative for debits)
+        type:
+          type: string
+          description: Transaction type
+          enum: [ invoice, debit, commission ]
+        description:
+          type: string
+          description: Optional description of the transaction
+          nullable: true
+        datetimeCreated:
+          type: string
+          format: date-time
+          description: When this transaction was created
+          nullable: true
+        modifiedByUserId:
+          type: integer
+          description: ID of the user who created or modified this transaction
+          nullable: true
+    Account:
+      type: object
+      required:
+        - accountId
+      properties:
+        accountId:
+          type: integer
+          description: Unique identifier for the account
+        name:
+          type: string
+          description: Name of the account
+        balance:
+          type: number
+          format: float
+          description: The amount of money available in this account
+        commissionRate:
+          type: number
+          format: float
+          description: Account-level commission rate (0-100). Null means no override.
+          nullable: true
+          minimum: 0
+          maximum: 100
+        discount:
+          type: number
+          format: float
+          description: Account-level discount percentage (0-100). Null means no override.
+          nullable: true
+          minimum: 0
+          maximum: 100
+    AccountTransactions:
+      type: object
+      required:
+        - accountTransactionId
+        - productId
+        - accountId
+        - typeId
+        - amount
+      properties:
+        accountTransactionId:
+          type: integer
+          description: Unique identifier for the account transaction
+        productId:
+          type: integer
+          description: Product ID from transactionProduct table (2 for AdLogic)
+          example: 2
+        accountId:
+          type: integer
+          description: ID of the account this transaction belongs to
+        typeId:
+          type: integer
+          description: Transaction type ID from transactionType table
+        amount:
+          type: number
+          format: float
+          description: The amount of money in this transaction (positive for deposits, negative for withdrawals)
+        description:
+          type: string
+          description: Any special notes about this transaction
+          nullable: true
+        externalTransactionId:
+          type: string
+          description: Optional external transaction identifier
+          nullable: true
+        externalTransactionData:
+          type: string
+          description: Optional external transaction data
+          nullable: true
+        datetimeTransaction:
+          type: string
+          format: date-time
+          description: Transaction datetime (defaults to datetimeCreated if not supplied)
+          nullable: true
+        modifiedByUserId:
+          type: integer
+          description: ID of the user who modified this transaction
+          nullable: true
+    CampaignTransaction:
+      type: object
+      required:
+        - campaignTransactionId
+        - accountId
+        - campaignId
+        - amount
+      properties:
+        campaignTransactionId:
+          type: integer
+          description: Unique identifier for the campaign transaction
+        accountTransactionId:
+          type: integer
+          description: ID of the linked account transaction (from transactionAccount table)
+          nullable: true
+        accountId:
+          type: integer
+          description: ID of the account this transaction belongs to
+        campaignSpendId:
+          type: integer
+          description: ID of the campaign spend that caused this transaction (null for transfers)
+          nullable: true
+        campaignId:
+          type: integer
+          description: ID of the campaign this transaction belongs to
+          nullable: true
+        amount:
+          type: number
+          format: float
+          description: The amount of money in this transaction (positive for deposits, negative for withdrawals)
+        description:
+          type: string
+          description: Any special notes about this transaction
+          nullable: true
+        date:
+          type: string
+          format: date
+          description: Date of the transaction
+          nullable: true
+        datetimeCreated:
+          type: string
+          format: date-time
+          description: When this transaction was created
+        datetimeModified:
+          type: string
+          format: date-time
+          description: When this transaction was last modified
+        modifiedByUserId:
+          type: integer
+          description: ID of the user who modified this transaction
+          nullable: true
+    blockedSubIdsAccount:
+      type: object
+      required:
+        - accountId
+      properties:
+        accountId:
+          type: integer
+          description: Account that has the blocked subId
+        subId:
+          type: string
+          description: The blocked subId or domain
+        encrypted:
+          type: boolean
+          description: Whether to encrypt the given subIds
+        modifiedByUserId:
+          type: integer
+          description: ID of the last person to modify this item
+    blockedSubIdsCampaign:
+      type: object
+      required:
+        - campaignId
+      properties:
+        campaignId:
+          type: integer
+          description: Campaign that has the blocked subId
+        subId:
+          type: string
+          description: The blocked subId or domain
+        encrypted:
+          type: boolean
+          description: Whether to encrypt the given subIds
+        modifiedByUserId:
+          type: integer
+          description: ID of the last person to modify this item

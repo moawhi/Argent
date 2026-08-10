@@ -1,0 +1,521 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// An upstream data source. Either an OpenAPI/HTTP API (`type = "api"`) or a
+/// SQL database (`type = "database"`: postgres | mariadb | clickhouse).
+model Connection {
+  id             String    @id @default(cuid())
+  name           String
+  slug           String    @unique
+  description    String?
+  /// api | database
+  type           String    @default("api")
+  /// The server URL every HTTP request is resolved against. For databases this
+  /// is a display address such as `postgres://host:5432/db`.
+  baseUrl        String
+  /// The full `servers[]` list from the spec so the user can switch later.
+  servers        Json      @default("[]")
+  specFormat     String    @default("yaml")
+  rawSpec        String?
+  specHash       String?
+  specTitle      String?
+  specVersion    String?
+  openapiVersion String?
+  /// Non-secret database settings: engine, host, port, database, user, ssl…
+  dbConfig       Json?
+  /// Values available to `{{variable}}` interpolation in manual requests.
+  variables      Json      @default("{}")
+  /// ConnectionHeader[] sent with every request. Rows marked secret keep an
+  /// empty value here; the real one lives in the AuthProfile vault.
+  defaultHeaders Json      @default("[]")
+  /// New connections start read-only so a mis-click cannot mutate real data.
+  readOnly       Boolean   @default(true)
+  /// untested | healthy | failing
+  status         String    @default("untested")
+  lastCheckedAt  DateTime?
+  lastError      String?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  authProfile   AuthProfile?
+  dbCatalog     DbCatalog?
+  operations    Operation[]
+  dataObjects   DataObject[]
+  dashboards    Dashboard[]
+  savedRequests SavedRequest[]
+  requestLogs   RequestLog[]
+  docPages      DocPage[]
+  apiGrants     ApiGrant[]
+  mcpServer     McpServer?
+}
+
+/// How credentials are attached to every outgoing request for a connection.
+/// The secret values themselves are AES-256-GCM encrypted and never leave the
+/// server process.
+model AuthProfile {
+  id           String @id @default(cuid())
+  connectionId String @unique
+
+  /// none | queryParam | header | bearer | basic | database
+  kind String @default("none")
+
+  /// Where each secret goes, e.g.
+  /// [{ "in": "query", "name": "apiu", "secretKey": "apiu" }]
+  injection Json @default("[]")
+
+  /// AES-256-GCM ciphertext of a `Record<string, string>` of secret values.
+  encryptedSecrets String?
+
+  /// Secret names only. Safe to render in the UI; values are never exposed.
+  secretKeys String[] @default([])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+}
+
+/// A single callable endpoint or SQL query. Rows come from an imported spec
+/// (`source = "spec"`), the manual request builder (`source = "manual"`), or a
+/// saved database query (`source = "sql"`).
+model Operation {
+  id           String @id @default(cuid())
+  connectionId String
+
+  /// Stable, human-readable key, e.g. `get_api_accounts_id`.
+  operationKey String
+  method       String
+  path         String
+  summary      String?
+  description  String?
+  tags         String[] @default([])
+
+  /// ParameterDescriptor[] - see src/server/openapi/types.ts
+  params Json @default("[]")
+
+  /// Dereferenced JSON Schema of the request body, if any.
+  requestSchema      Json?
+  requestContentType String?
+
+  /// Dereferenced JSON Schema of the success response.
+  responseSchema       Json?
+  responseContentTypes String[] @default([])
+  successStatus        String?
+
+  /// Extra static headers, used mainly by manually created operations.
+  staticHeaders Json @default("[]")
+
+  /// SQL with `{{param}}` placeholders, for `source = "sql"`.
+  sqlTemplate String?
+
+  source     String  @default("spec")
+  deprecated Boolean @default(false)
+  sortOrder  Int     @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection  Connection   @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  dataObjects DataObject[]
+  requestLogs RequestLog[]
+  apiGrants   ApiGrant[]
+  mcpTools    McpServerTool[]
+
+  @@unique([connectionId, operationKey])
+  @@index([connectionId, source])
+}
+
+/// Cached schema tree for a database connection (schemas → tables → columns).
+model DbCatalog {
+  id           String   @id @default(cuid())
+  connectionId String   @unique
+  /// DbSchema[] — see src/server/database/types.ts
+  schemas      Json     @default("[]")
+  refreshedAt  DateTime @default(now())
+
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+}
+
+/// A configured, reusable piece of UI bound to one operation.
+model DataObject {
+  id           String  @id @default(cuid())
+  connectionId String
+  operationId  String?
+
+  name        String
+  description String?
+
+  /// table | chart | kpi | form | action
+  kind String
+
+  /// Kind-specific presentation config - see src/lib/objects/types.ts
+  config Json @default("{}")
+
+  /// How each operation parameter gets its value:
+  /// { "fromDate": { "mode": "filter", "filterKey": "dateRange.from" } }
+  paramBindings Json @default("{}")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection Connection        @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  operation  Operation?        @relation(fields: [operationId], references: [id], onDelete: SetNull)
+  widgets    DashboardWidget[]
+
+  @@index([connectionId, kind])
+}
+
+model Dashboard {
+  id           String  @id @default(cuid())
+  connectionId String?
+
+  name        String
+  slug        String  @unique
+  description String?
+  isDefault   Boolean @default(false)
+  /// When false, the filter bar is hidden on the dashboard page.
+  filtersVisible Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection Connection?       @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  widgets    DashboardWidget[]
+  filters    GlobalFilter[]
+  grants     DashboardGrant[]
+}
+
+/// Placement of a DataObject on a dashboard grid (12 column layout).
+model DashboardWidget {
+  id           String  @id @default(cuid())
+  dashboardId  String
+  dataObjectId String
+  title        String?
+
+  x Int @default(0)
+  y Int @default(0)
+  w Int @default(6)
+  h Int @default(8)
+
+  /// Widget ids this one listens to for row-selection binding.
+  linkedWidgetId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dashboard  Dashboard  @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  dataObject DataObject @relation(fields: [dataObjectId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+}
+
+/// A dashboard-wide control (date range, account picker, ...) that widget
+/// parameters can bind to.
+model GlobalFilter {
+  id          String @id @default(cuid())
+  dashboardId String
+
+  key   String
+  label String
+
+  /// dateRange | date | text | number | select | boolean
+  kind String
+
+  defaultValue Json?
+  /// For `select`: either a static list or a lookup operation.
+  options      Json  @default("{}")
+  sortOrder    Int   @default(0)
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+
+  @@unique([dashboardId, key])
+}
+
+/// A Postman-style request saved from the manual builder.
+model SavedRequest {
+  id           String  @id @default(cuid())
+  connectionId String?
+
+  name   String
+  method String @default("GET")
+  url    String
+
+  /// KeyValueEntry[] = { key, value, enabled, description }
+  headers     Json @default("[]")
+  queryParams Json @default("[]")
+  pathParams  Json @default("[]")
+
+  /// none | json | raw | form
+  bodyMode String  @default("none")
+  body     String?
+
+  /// inherit | none | bearer | basic | apiKey
+  authMode   String @default("inherit")
+  authConfig Json   @default("{}")
+
+  lastStatus     Int?
+  lastDurationMs Int?
+  lastRunAt      DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+}
+
+/// One row per upstream call. Powers the health and usage columns in the
+/// API explorer, plus the admin Activity tab.
+model RequestLog {
+  id           String  @id @default(cuid())
+  connectionId String
+  operationId  String?
+  userId       String?
+
+  method String
+  /// Target URL with every credential value replaced by `***`.
+  url    String
+
+  status     Int?
+  ok         Boolean @default(false)
+  durationMs Int     @default(0)
+  error      String?
+
+  requestBytes  Int?
+  responseBytes Int?
+
+  /// Redacted/truncated payloads for troubleshooting (admin Activity tab).
+  requestParams Json?
+  requestBody   Json?
+  responseBody  Json?
+
+  /// gateway | tryIt | manual | test | mcp
+  origin String @default("gateway")
+
+  createdAt DateTime @default(now())
+
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  operation  Operation? @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  user       User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([connectionId, createdAt])
+  @@index([operationId, createdAt])
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+/// Human-authored annotations layered on top of the auto-generated docs.
+model DocPage {
+  id           String @id @default(cuid())
+  connectionId String
+
+  /// overview | tag | operation
+  scope     String
+  /// "" for overview, the tag name for tags, the operationKey for operations.
+  targetKey String
+
+  title        String?
+  bodyMarkdown String  @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection Connection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  @@unique([connectionId, scope, targetKey])
+}
+
+/// App login role (admin, dev, sales, client, or custom).
+model Role {
+  id          String  @id @default(cuid())
+  key         String  @unique
+  label       String
+  description String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users            User[]
+  sectionGrants    SectionGrant[]
+  dashboardGrants  DashboardGrant[]
+  apiGrants        ApiGrant[]
+}
+
+/// Signed-in seeIt user (email + password).
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  name         String
+  passwordHash String
+  roleId       String
+  active       Boolean @default(true)
+  /// light | dark | system | soft | contrast
+  theme        String  @default("light")
+  /// Set when an admin issues a temporary password.
+  mustChangePassword Boolean @default(false)
+  /// Null until the first-login onboarding wizard is finished.
+  onboardingCompletedAt DateTime?
+  /// Soft-hide the bundled demo from this user's dashboards/docs lists.
+  /// Admins ignore this and are the only ones who can fully delete the demo.
+  hideDemo Boolean @default(false)
+  /// Null until the user confirms their email (public sign-up).
+  /// Bootstrap admin and admin-created users are marked verified immediately.
+  emailVerifiedAt DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role                     Role                      @relation(fields: [roleId], references: [id])
+  sectionGrants            SectionGrant[]
+  dashboardGrants          DashboardGrant[]
+  apiGrants                ApiGrant[]
+  requestLogs              RequestLog[]
+  passwordResetTokens      PasswordResetToken[]
+  emailVerificationTokens  EmailVerificationToken[]
+  mcpServersCreated        McpServer[]
+  mcpAccessTokensCreated   McpAccessToken[]
+}
+
+/// One-time password reset link. Only the hash is stored.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// One-time email verification link. Only the hash is stored.
+model EmailVerificationToken {
+  id        String    @id @default(cuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+/// Who may call APIs on a connection (whole) or a single operation.
+/// Empty grants for a connection = open (anyone with the section). Once any
+/// grant exists for that connection, only matching users/roles (and admins)
+/// may call its operations.
+model ApiGrant {
+  id           String  @id @default(cuid())
+  /// Whole-connection grant when set and operationId is null.
+  connectionId String?
+  /// Single-operation grant.
+  operationId  String?
+  roleId       String?
+  userId       String?
+
+  connection Connection? @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  operation  Operation?  @relation(fields: [operationId], references: [id], onDelete: Cascade)
+  role       Role?       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user       User?       @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([connectionId])
+  @@index([operationId])
+  @@index([roleId])
+  @@index([userId])
+}
+
+/// Which nav section a role or user may open.
+/// section ∈ dashboards | objects | explorer | requests | connections | docs | users
+model SectionGrant {
+  id      String  @id @default(cuid())
+  section String
+  roleId  String?
+  userId  String?
+
+  role Role? @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user User? @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([section])
+  @@index([roleId])
+  @@index([userId])
+}
+
+/// Hosted MCP server for one API connection. Tools are selected operations;
+/// clients authenticate with McpAccessToken bearer secrets.
+model McpServer {
+  id           String  @id @default(cuid())
+  connectionId String  @unique
+  enabled      Boolean @default(false)
+  createdById  String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  connection Connection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  createdBy  User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  tools      McpServerTool[]
+  tokens     McpAccessToken[]
+}
+
+/// An Operation exposed as an MCP tool on a connection's MCP server.
+model McpServerTool {
+  id          String @id @default(cuid())
+  mcpServerId String
+  operationId String
+
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  operation Operation @relation(fields: [operationId], references: [id], onDelete: Cascade)
+
+  @@unique([mcpServerId, operationId])
+  @@index([mcpServerId])
+  @@index([operationId])
+}
+
+/// Bearer token for MCP clients. Only the hash is stored; raw value shown once.
+model McpAccessToken {
+  id          String    @id @default(cuid())
+  mcpServerId String
+  name        String
+  tokenHash   String    @unique
+  tokenPrefix String
+  createdById String
+  lastUsedAt  DateTime?
+  revokedAt   DateTime?
+
+  createdAt DateTime @default(now())
+
+  mcpServer McpServer @relation(fields: [mcpServerId], references: [id], onDelete: Cascade)
+  createdBy User      @relation(fields: [createdById], references: [id], onDelete: Cascade)
+
+  @@index([mcpServerId])
+  @@index([createdById])
+}
+
+/// Who may view a dashboard. Empty grants = anyone with the Dashboards section.
+model DashboardGrant {
+  id          String  @id @default(cuid())
+  dashboardId String
+  roleId      String?
+  userId      String?
+
+  dashboard Dashboard @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  role      Role?     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  user      User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([dashboardId])
+  @@index([roleId])
+  @@index([userId])
+}

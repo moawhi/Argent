@@ -1,0 +1,332 @@
+@import "tailwindcss";
+
+@theme {
+  --color-canvas: oklch(0.98 0.003 250);
+  --color-surface: oklch(1 0 0);
+  --color-line: oklch(0.92 0.005 250);
+  --color-ink: oklch(0.22 0.02 265);
+  --color-ink-soft: oklch(0.52 0.015 265);
+  --color-ink-faint: oklch(0.66 0.012 265);
+
+  /* Soft seafoam brand — aligns with landing mint / sand / sky identity */
+  --color-brand: oklch(0.52 0.09 170);
+  --color-brand-soft: oklch(0.96 0.025 170);
+  --color-brand-ink: oklch(0.38 0.08 170);
+
+  --color-positive: oklch(0.62 0.15 155);
+  --color-positive-soft: oklch(0.96 0.03 155);
+  --color-warning: oklch(0.72 0.15 75);
+  --color-warning-soft: oklch(0.97 0.04 85);
+  --color-danger: oklch(0.58 0.2 25);
+  --color-danger-soft: oklch(0.96 0.03 25);
+
+  --radius-card: 0.75rem;
+}
+
+/* Named app themes — same token names so utilities pick them up automatically. */
+html[data-theme="light"],
+html:not([data-theme]) {
+  --color-canvas: oklch(0.98 0.003 250);
+  --color-surface: oklch(1 0 0);
+  --color-line: oklch(0.92 0.005 250);
+  --color-ink: oklch(0.22 0.02 265);
+  --color-ink-soft: oklch(0.52 0.015 265);
+  --color-ink-faint: oklch(0.66 0.012 265);
+  /* Soft seafoam brand — aligns with landing mint / sand / sky identity */
+  --color-brand: oklch(0.52 0.09 170);
+  --color-brand-soft: oklch(0.96 0.025 170);
+  --color-brand-ink: oklch(0.38 0.08 170);
+  --color-positive: oklch(0.62 0.15 155);
+  --color-positive-soft: oklch(0.96 0.03 155);
+  --color-warning: oklch(0.72 0.15 75);
+  --color-warning-soft: oklch(0.97 0.04 85);
+  --color-danger: oklch(0.58 0.2 25);
+  --color-danger-soft: oklch(0.96 0.03 25);
+}
+
+html[data-theme="soft"] {
+  --color-canvas: oklch(0.97 0.012 160);
+  --color-surface: oklch(0.995 0.006 150);
+  --color-line: oklch(0.9 0.015 160);
+  --color-ink: oklch(0.28 0.03 160);
+  --color-ink-soft: oklch(0.5 0.02 160);
+  --color-ink-faint: oklch(0.64 0.015 160);
+  --color-brand: oklch(0.5 0.09 170);
+  --color-brand-soft: oklch(0.95 0.03 170);
+  --color-brand-ink: oklch(0.36 0.08 170);
+  --color-positive: oklch(0.6 0.13 160);
+  --color-positive-soft: oklch(0.96 0.025 160);
+  --color-warning: oklch(0.7 0.13 80);
+  --color-warning-soft: oklch(0.97 0.03 85);
+  --color-danger: oklch(0.56 0.18 25);
+  --color-danger-soft: oklch(0.96 0.025 25);
+}
+
+html[data-theme="contrast"] {
+  --color-canvas: oklch(1 0 0);
+  --color-surface: oklch(1 0 0);
+  --color-line: oklch(0.78 0.01 265);
+  --color-ink: oklch(0.12 0.02 265);
+  --color-ink-soft: oklch(0.32 0.02 265);
+  --color-ink-faint: oklch(0.45 0.015 265);
+  --color-brand: oklch(0.4 0.1 170);
+  --color-brand-soft: oklch(0.94 0.035 170);
+  --color-brand-ink: oklch(0.28 0.09 170);
+  --color-positive: oklch(0.45 0.16 155);
+  --color-positive-soft: oklch(0.94 0.04 155);
+  --color-warning: oklch(0.55 0.16 70);
+  --color-warning-soft: oklch(0.95 0.05 80);
+  --color-danger: oklch(0.45 0.22 25);
+  --color-danger-soft: oklch(0.94 0.04 25);
+}
+
+html[data-theme="dark"] {
+  --color-canvas: oklch(0.16 0.015 265);
+  --color-surface: oklch(0.2 0.016 265);
+  --color-line: oklch(0.3 0.015 265);
+  --color-ink: oklch(0.93 0.01 265);
+  --color-ink-soft: oklch(0.72 0.015 265);
+  --color-ink-faint: oklch(0.58 0.012 265);
+  --color-brand: oklch(0.74 0.1 170);
+  --color-brand-soft: oklch(0.28 0.04 170);
+  --color-brand-ink: oklch(0.86 0.06 170);
+  --color-positive: oklch(0.72 0.14 155);
+  --color-positive-soft: oklch(0.28 0.04 155);
+  --color-warning: oklch(0.78 0.12 85);
+  --color-warning-soft: oklch(0.3 0.04 85);
+  --color-danger: oklch(0.7 0.16 25);
+  --color-danger-soft: oklch(0.28 0.05 25);
+}
+
+@layer base {
+  * {
+    border-color: var(--color-line);
+  }
+
+  html,
+  body {
+    height: 100%;
+  }
+
+  body {
+    background-color: var(--color-canvas);
+    color: var(--color-ink);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Number-heavy UI reads better with tabular figures. */
+  table,
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  .card {
+    background-color: var(--color-surface);
+    border-width: 1px;
+    border-radius: var(--radius-card);
+    box-shadow: 0 1px 2px oklch(0.2 0.02 265 / 0.04);
+  }
+
+  html[data-theme="dark"] .card {
+    box-shadow: 0 1px 2px oklch(0 0 0 / 0.35);
+  }
+}
+
+/* react-grid-layout: the package ships no CSS, these are the required bits. */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+.react-grid-item {
+  transition:
+    transform 200ms ease,
+    width 200ms ease,
+    height 200ms ease;
+}
+
+.react-grid-item.react-draggable-dragging,
+.react-grid-item.resizing {
+  transition: none;
+  z-index: 3;
+  will-change: transform;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: var(--color-brand);
+  opacity: 0.14;
+  border-radius: var(--radius-card);
+  transition-duration: 100ms;
+  z-index: 2;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+}
+
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  bottom: 5px;
+  width: 7px;
+  height: 7px;
+  border-right: 2px solid var(--color-ink-faint);
+  border-bottom: 2px solid var(--color-ink-faint);
+}
+
+@keyframes seeit-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(2px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.animate-fade-in {
+  animation: seeit-fade-in 160ms ease-out;
+}
+
+/* ------------------------------------------------------------------ *
+ * Marketing landing — soft pastel, Aave-card energy without lavender
+ * ------------------------------------------------------------------ */
+
+.landing {
+  --landing-canvas: #f4f7f4;
+  --landing-ink: #1e2a24;
+  --landing-ink-soft: #5a6b62;
+  --landing-accent: #2f6f5e;
+  font-family: var(--font-landing-body), ui-sans-serif, system-ui, sans-serif;
+}
+
+.landing-aurora {
+  background:
+    radial-gradient(ellipse 80% 60% at 15% 20%, #cfe8dc 0%, transparent 55%),
+    radial-gradient(ellipse 70% 50% at 85% 10%, #e8dcc8 0%, transparent 50%),
+    radial-gradient(ellipse 60% 45% at 60% 70%, #c5dce8 0%, transparent 55%),
+    linear-gradient(165deg, #eef4ef 0%, #f7f3eb 45%, #e9f1f4 100%);
+}
+
+.landing-grid {
+  background-image:
+    linear-gradient(rgba(30, 42, 36, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(30, 42, 36, 0.04) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: linear-gradient(to bottom, black 0%, transparent 70%);
+}
+
+.landing-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(40px);
+  opacity: 0.7;
+  animation: landing-drift 18s ease-in-out infinite;
+}
+
+.landing-blob-a {
+  width: min(48vw, 28rem);
+  height: min(48vw, 28rem);
+  left: -8%;
+  top: 8%;
+  background: #b9dccf;
+  animation-delay: 0s;
+}
+
+.landing-blob-b {
+  width: min(42vw, 24rem);
+  height: min(42vw, 24rem);
+  right: -6%;
+  top: 18%;
+  background: #e2d4b8;
+  animation-delay: -6s;
+}
+
+.landing-blob-c {
+  width: min(50vw, 30rem);
+  height: min(36vw, 22rem);
+  left: 28%;
+  bottom: 6%;
+  background: #b7cfe0;
+  animation-delay: -11s;
+}
+
+.landing-dashboard-plane {
+  background:
+    linear-gradient(
+      to top,
+      rgba(244, 247, 244, 0.92) 0%,
+      rgba(244, 247, 244, 0.55) 40%,
+      transparent 100%
+    ),
+    repeating-linear-gradient(
+      -12deg,
+      transparent,
+      transparent 18px,
+      rgba(47, 111, 94, 0.05) 18px,
+      rgba(47, 111, 94, 0.05) 19px
+    );
+}
+
+.landing-value-card {
+  animation: landing-card-rise 700ms ease-out both;
+  min-height: 14rem;
+}
+
+.landing-mascot {
+  animation: landing-float 5.5s ease-in-out infinite;
+}
+
+.landing-mascot-core {
+  animation: landing-float 5.5s ease-in-out infinite;
+  animation-delay: -1.2s;
+}
+
+@keyframes landing-drift {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(3%, -4%, 0) scale(1.06);
+  }
+}
+
+@keyframes landing-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes landing-card-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-blob,
+  .landing-mascot,
+  .landing-mascot-core,
+  .landing-value-card {
+    animation: none !important;
+  }
+}

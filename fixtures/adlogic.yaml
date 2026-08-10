@@ -1,0 +1,1154 @@
+openapi: 3.0.3
+info:
+  title: AdLogic API
+  version: "2.4"
+  description: >-
+    Affiliate campaign management and reporting. Every call is authenticated
+    with your account's `apiu` and `apik` values, passed as query parameters.
+    Report endpoints share the same `fromDate` / `toDate` / `timezone` /
+    `format` shape, so one date control can drive a whole dashboard.
+
+servers:
+  - url: http://localhost:3000/api/demo
+    description: Local demo data bundled with seeIt
+  - url: https://api.adlogic.example.com
+    description: Production
+
+tags:
+  - name: Accounts
+    description: Advertiser and publisher accounts.
+  - name: Account Groups
+    description: Collections of accounts that are reported on together.
+  - name: Campaigns
+    description: Individual advertising campaigns.
+  - name: Campaign Groups
+    description: Collections of campaigns sharing a budget and schedule.
+  - name: Stats
+    description: Time-series performance figures.
+  - name: Commission Reports
+    description: Payable commission, by account and by campaign.
+
+# --------------------------------------------------------------------------
+# Reusable pieces
+# --------------------------------------------------------------------------
+
+components:
+  parameters:
+    apiu:
+      name: apiu
+      in: query
+      required: true
+      description: Your API username.
+      schema:
+        type: string
+    apik:
+      name: apik
+      in: query
+      required: true
+      description: Your API key.
+      schema:
+        type: string
+    fromDate:
+      name: fromDate
+      in: query
+      required: true
+      description: First day included in the report.
+      schema:
+        type: string
+        format: date
+        example: "2026-06-01"
+    toDate:
+      name: toDate
+      in: query
+      required: true
+      description: Last day included in the report.
+      schema:
+        type: string
+        format: date
+        example: "2026-06-30"
+    timezone:
+      name: timezone
+      in: query
+      required: false
+      description: Timezone the days are counted in.
+      schema:
+        type: string
+        default: UTC
+        enum: [UTC, Australia/Sydney, America/New_York, Europe/London]
+    format:
+      name: format
+      in: query
+      required: false
+      description: Response format.
+      schema:
+        type: string
+        default: json
+        enum: [json, csv]
+    groupBy:
+      name: groupBy
+      in: query
+      required: false
+      description: Time bucket each row covers.
+      schema:
+        type: string
+        default: day
+        enum: [hour, day, week, month]
+    status:
+      name: status
+      in: query
+      required: false
+      description: Only return records with this status.
+      schema:
+        type: string
+        enum: [active, paused, archived]
+    limit:
+      name: limit
+      in: query
+      required: false
+      description: Largest number of records to return.
+      schema:
+        type: integer
+        default: 100
+        minimum: 1
+        maximum: 1000
+
+  schemas:
+    Account:
+      type: object
+      properties:
+        id:
+          type: integer
+          description: Unique account number.
+        name:
+          type: string
+          description: Account name.
+        accountType:
+          type: string
+          enum: [advertiser, publisher]
+        status:
+          type: string
+          enum: [active, paused, archived]
+        contactEmail:
+          type: string
+          format: email
+        websiteUrl:
+          type: string
+          format: uri
+        balanceAmount:
+          type: number
+          format: double
+          description: Current account balance in USD.
+        commissionRate:
+          type: number
+          minimum: 0
+          maximum: 100
+          description: Share of revenue paid to this account.
+        accountGroupId:
+          type: integer
+        createdAt:
+          type: string
+          format: date-time
+
+    AccountInput:
+      type: object
+      required: [name, accountType]
+      properties:
+        name:
+          type: string
+          description: Account name.
+        accountType:
+          type: string
+          enum: [advertiser, publisher]
+        status:
+          type: string
+          enum: [active, paused, archived]
+          default: active
+        contactEmail:
+          type: string
+          format: email
+        websiteUrl:
+          type: string
+          format: uri
+        commissionRate:
+          type: number
+          minimum: 0
+          maximum: 100
+        accountGroupId:
+          type: integer
+
+    AccountGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        accountCount:
+          type: integer
+        status:
+          type: string
+          enum: [active, paused, archived]
+        createdAt:
+          type: string
+          format: date-time
+
+    AccountGroupInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, archived]
+          default: active
+
+    Campaign:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        accountId:
+          type: integer
+        campaignGroupId:
+          type: integer
+        status:
+          type: string
+          enum: [active, paused, archived]
+        dailyBudget:
+          type: number
+          format: double
+          description: Daily spend cap in USD.
+        totalSpend:
+          type: number
+          format: double
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        conversions:
+          type: integer
+        clickThroughRate:
+          type: number
+          minimum: 0
+          maximum: 100
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        landingPageUrl:
+          type: string
+          format: uri
+
+    CampaignInput:
+      type: object
+      required: [name, accountId]
+      properties:
+        name:
+          type: string
+        accountId:
+          type: integer
+        campaignGroupId:
+          type: integer
+        status:
+          type: string
+          enum: [active, paused, archived]
+          default: active
+        dailyBudget:
+          type: number
+          format: double
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        landingPageUrl:
+          type: string
+          format: uri
+
+    CampaignGroup:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [active, paused, archived]
+        campaignCount:
+          type: integer
+        monthlyBudget:
+          type: number
+          format: double
+        totalSpend:
+          type: number
+          format: double
+        ownerEmail:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+
+    CampaignGroupInput:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          description: A short, recognisable name.
+        description:
+          type: string
+          description: What this group of campaigns is for.
+        status:
+          type: string
+          enum: [active, paused, archived]
+          default: active
+        monthlyBudget:
+          type: number
+          format: double
+          description: Spend cap for the whole group, per month.
+        ownerEmail:
+          type: string
+          format: email
+          description: Who to contact about this group.
+
+    StatRow:
+      type: object
+      properties:
+        date:
+          type: string
+          format: date-time
+        impressions:
+          type: integer
+        clicks:
+          type: integer
+        conversions:
+          type: integer
+        spend:
+          type: number
+          format: double
+        revenue:
+          type: number
+          format: double
+        clickThroughRate:
+          type: number
+          minimum: 0
+          maximum: 100
+        conversionRate:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    StatsEnvelope:
+      type: object
+      properties:
+        fromDate:
+          type: string
+          format: date
+        toDate:
+          type: string
+          format: date
+        timezone:
+          type: string
+        stats:
+          type: array
+          items:
+            $ref: "#/components/schemas/StatRow"
+
+    CommissionRow:
+      type: object
+      properties:
+        accountId:
+          type: integer
+        accountName:
+          type: string
+        campaignId:
+          type: integer
+        campaignName:
+          type: string
+        conversions:
+          type: integer
+        revenue:
+          type: number
+          format: double
+        commissionRate:
+          type: number
+          minimum: 0
+          maximum: 100
+        commissionAmount:
+          type: number
+          format: double
+        currency:
+          type: string
+        payoutStatus:
+          type: string
+          enum: [pending, approved, paid]
+
+    CommissionEnvelope:
+      type: object
+      properties:
+        fromDate:
+          type: string
+          format: date
+        toDate:
+          type: string
+          format: date
+        totalCommission:
+          type: number
+          format: double
+        currency:
+          type: string
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/CommissionRow"
+
+    Summary:
+      type: object
+      properties:
+        totalSpend:
+          type: number
+          format: double
+        totalRevenue:
+          type: number
+          format: double
+        totalConversions:
+          type: integer
+        totalClicks:
+          type: integer
+        totalImpressions:
+          type: integer
+        activeCampaigns:
+          type: integer
+        returnOnAdSpend:
+          type: number
+        conversionRate:
+          type: number
+          minimum: 0
+          maximum: 100
+
+    Deleted:
+      type: object
+      properties:
+        id:
+          type: integer
+        deleted:
+          type: boolean
+
+# --------------------------------------------------------------------------
+# Paths
+# --------------------------------------------------------------------------
+
+paths:
+  /accounts:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Accounts]
+      operationId: listAccounts
+      summary: List accounts
+      description: Every advertiser and publisher account you can see.
+      parameters:
+        - $ref: "#/components/parameters/status"
+        - $ref: "#/components/parameters/limit"
+        - name: accountGroupId
+          in: query
+          required: false
+          description: Only accounts in this group.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of accounts.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+    post:
+      tags: [Accounts]
+      operationId: createAccount
+      summary: Create an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "201":
+          description: The account that was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+
+  /accounts/{id}:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        description: Account number.
+        schema:
+          type: integer
+    get:
+      tags: [Accounts]
+      operationId: getAccount
+      summary: Get one account
+      responses:
+        "200":
+          description: One account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+    put:
+      tags: [Accounts]
+      operationId: updateAccount
+      summary: Update an account
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountInput"
+      responses:
+        "200":
+          description: The updated account.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Account"
+    delete:
+      tags: [Accounts]
+      operationId: deleteAccount
+      summary: Delete an account
+      responses:
+        "200":
+          description: Confirmation that it was removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deleted"
+
+  /accounts/{id}/campaigns:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Accounts]
+      operationId: listAccountCampaigns
+      summary: List an account's campaigns
+      parameters:
+        - $ref: "#/components/parameters/status"
+      responses:
+        "200":
+          description: Campaigns belonging to this account.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+
+  /account-groups:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Account Groups]
+      operationId: listAccountGroups
+      summary: List account groups
+      parameters:
+        - $ref: "#/components/parameters/status"
+      responses:
+        "200":
+          description: A list of account groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AccountGroup"
+    post:
+      tags: [Account Groups]
+      operationId: createAccountGroup
+      summary: Create an account group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountGroupInput"
+      responses:
+        "201":
+          description: The group that was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountGroup"
+
+  /account-groups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Account Groups]
+      operationId: getAccountGroup
+      summary: Get one account group
+      responses:
+        "200":
+          description: One account group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountGroup"
+    put:
+      tags: [Account Groups]
+      operationId: updateAccountGroup
+      summary: Update an account group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccountGroupInput"
+      responses:
+        "200":
+          description: The updated group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccountGroup"
+    delete:
+      tags: [Account Groups]
+      operationId: deleteAccountGroup
+      summary: Delete an account group
+      responses:
+        "200":
+          description: Confirmation that it was removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deleted"
+
+  /account-groups/{id}/accounts:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Account Groups]
+      operationId: listGroupAccounts
+      summary: List accounts in a group
+      responses:
+        "200":
+          description: Accounts in this group.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+
+  /campaigns:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Campaigns]
+      operationId: listCampaigns
+      summary: List campaigns
+      description: Every campaign, with its lifetime performance figures.
+      parameters:
+        - $ref: "#/components/parameters/status"
+        - $ref: "#/components/parameters/limit"
+        - name: accountId
+          in: query
+          required: false
+          description: Only campaigns for this account.
+          schema:
+            type: integer
+        - name: campaignGroupId
+          in: query
+          required: false
+          description: Only campaigns in this group.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: A list of campaigns.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+    post:
+      tags: [Campaigns]
+      operationId: createCampaign
+      summary: Create a campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignInput"
+      responses:
+        "201":
+          description: The campaign that was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{id}:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Campaigns]
+      operationId: getCampaign
+      summary: Get one campaign
+      responses:
+        "200":
+          description: One campaign.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+    put:
+      tags: [Campaigns]
+      operationId: updateCampaign
+      summary: Update a campaign
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignInput"
+      responses:
+        "200":
+          description: The updated campaign.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+    delete:
+      tags: [Campaigns]
+      operationId: deleteCampaign
+      summary: Delete a campaign
+      responses:
+        "200":
+          description: Confirmation that it was removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deleted"
+
+  /campaigns/{id}/pause:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Campaigns]
+      operationId: pauseCampaign
+      summary: Pause a campaign
+      responses:
+        "200":
+          description: The paused campaign.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaigns/{id}/resume:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    post:
+      tags: [Campaigns]
+      operationId: resumeCampaign
+      summary: Resume a campaign
+      responses:
+        "200":
+          description: The resumed campaign.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Campaign"
+
+  /campaign-groups:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Campaign Groups]
+      operationId: listCampaignGroups
+      summary: List campaign groups
+      parameters:
+        - $ref: "#/components/parameters/status"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: A list of campaign groups.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/CampaignGroup"
+    post:
+      tags: [Campaign Groups]
+      operationId: createCampaignGroup
+      summary: Create a campaign group
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignGroupInput"
+      responses:
+        "201":
+          description: The group that was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignGroup"
+
+  /campaign-groups/{id}:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        description: Campaign group number.
+        schema:
+          type: integer
+    get:
+      tags: [Campaign Groups]
+      operationId: getCampaignGroup
+      summary: Get one campaign group
+      responses:
+        "200":
+          description: One campaign group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignGroup"
+    put:
+      tags: [Campaign Groups]
+      operationId: updateCampaignGroup
+      summary: Update a campaign group
+      description: >-
+        Change a group's name, budget or status. Every field is optional except
+        the name.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CampaignGroupInput"
+      responses:
+        "200":
+          description: The updated group.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CampaignGroup"
+    delete:
+      tags: [Campaign Groups]
+      operationId: deleteCampaignGroup
+      summary: Delete a campaign group
+      responses:
+        "200":
+          description: Confirmation that it was removed.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Deleted"
+
+  /campaign-groups/{id}/campaigns:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+      - name: id
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Campaign Groups]
+      operationId: listGroupCampaigns
+      summary: List campaigns in a group
+      description: The campaigns associated with this group.
+      parameters:
+        - $ref: "#/components/parameters/status"
+      responses:
+        "200":
+          description: Campaigns in this group.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+
+  /stats/summary:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Stats]
+      operationId: getStatsSummary
+      summary: Get headline totals
+      description: One row of totals for the period, for KPI cards.
+      parameters:
+        - $ref: "#/components/parameters/fromDate"
+        - $ref: "#/components/parameters/toDate"
+        - $ref: "#/components/parameters/timezone"
+      responses:
+        "200":
+          description: Totals for the period.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Summary"
+
+  /stats/daily:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Stats]
+      operationId: getDailyStats
+      summary: Get performance over time
+      description: >-
+        One row per time bucket between the two dates. The natural source for a
+        line or bar chart.
+      parameters:
+        - $ref: "#/components/parameters/fromDate"
+        - $ref: "#/components/parameters/toDate"
+        - $ref: "#/components/parameters/groupBy"
+        - $ref: "#/components/parameters/timezone"
+        - $ref: "#/components/parameters/format"
+        - name: campaignId
+          in: query
+          required: false
+          description: Narrow the figures to one campaign.
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Figures for each bucket in the period.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/StatsEnvelope"
+
+  /stats/campaigns:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Stats]
+      operationId: getCampaignStats
+      summary: Get performance by campaign
+      parameters:
+        - $ref: "#/components/parameters/fromDate"
+        - $ref: "#/components/parameters/toDate"
+        - $ref: "#/components/parameters/timezone"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: One row per campaign.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Campaign"
+
+  /stats/accounts:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Stats]
+      operationId: getAccountStats
+      summary: Get performance by account
+      parameters:
+        - $ref: "#/components/parameters/fromDate"
+        - $ref: "#/components/parameters/toDate"
+        - $ref: "#/components/parameters/timezone"
+      responses:
+        "200":
+          description: One row per account.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Account"
+
+  /reports/commission:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Commission Reports]
+      operationId: getCommissionReport
+      summary: Get the commission report
+      description: Commission earned per account and campaign over the period.
+      parameters:
+        - $ref: "#/components/parameters/fromDate"
+        - $ref: "#/components/parameters/toDate"
+        - $ref: "#/components/parameters/timezone"
+        - $ref: "#/components/parameters/format"
+        - name: accountId
+          in: query
+          required: false
+          schema:
+            type: integer
+        - name: payoutStatus
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [pending, approved, paid]
+      responses:
+        "200":
+          description: The commission report.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CommissionEnvelope"
+
+  /reports/commission/summary:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Commission Reports]
+      operationId: getCommissionSummary
+      summary: Get total commission
+      parameters:
+        - $ref: "#/components/parameters/fromDate"
+        - $ref: "#/components/parameters/toDate"
+        - $ref: "#/components/parameters/timezone"
+      responses:
+        "200":
+          description: Commission totals for the period.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                  toDate:
+                    type: string
+                    format: date
+                  totalCommission:
+                    type: number
+                    format: double
+                  paidCommission:
+                    type: number
+                    format: double
+                  pendingCommission:
+                    type: number
+                    format: double
+                  currency:
+                    type: string
+
+  /reports/commission/daily:
+    parameters:
+      - $ref: "#/components/parameters/apiu"
+      - $ref: "#/components/parameters/apik"
+    get:
+      tags: [Commission Reports]
+      operationId: getDailyCommission
+      summary: Get commission over time
+      parameters:
+        - $ref: "#/components/parameters/fromDate"
+        - $ref: "#/components/parameters/toDate"
+        - $ref: "#/components/parameters/groupBy"
+        - $ref: "#/components/parameters/timezone"
+      responses:
+        "200":
+          description: Commission for each bucket in the period.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  fromDate:
+                    type: string
+                    format: date
+                  toDate:
+                    type: string
+                    format: date
+                  stats:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        date:
+                          type: string
+                          format: date-time
+                        conversions:
+                          type: integer
+                        revenue:
+                          type: number
+                          format: double
+                        commissionAmount:
+                          type: number
+                          format: double
