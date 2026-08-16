@@ -9,6 +9,21 @@ Every upstream call goes through a server-side gateway, so credentials are
 stored encrypted and never reach the browser or MCP clients, and CORS never
 comes up.
 
+<p align="center">
+  <img src="docs/screenshots/landing.jpg" alt="Argent landing page" width="800" />
+  <br /><em>Landing</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/home.png" alt="Argent home after sign-in" width="800" />
+  <br /><em>Home after sign-in</em>
+</p>
+
+<p align="center">
+  <img src="docs/screenshots/dashboard.png" alt="Campaign performance demo dashboard" width="800" />
+  <br /><em>Demo dashboard — Campaign performance</em>
+</p>
+
 ## What it does
 
 | Area                | What you get                                                                                        |
