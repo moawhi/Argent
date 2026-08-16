@@ -38,7 +38,7 @@ export default async function ObjectsPage() {
           <EmptyState
             icon={<Boxes className="size-5" />}
             title="Connect an API first"
-            description="Objects read their data from an endpoint, so seeIt needs to know about at least one API before you can build one."
+            description="Objects read their data from an endpoint, so Argent needs to know about at least one API before you can build one."
             action={
               <Link href="/connections/new">
                 <Button>
@@ -51,7 +51,7 @@ export default async function ObjectsPage() {
           <EmptyState
             icon={<Boxes className="size-5" />}
             title="No objects yet"
-            description="Pick an endpoint and seeIt will suggest whether it works best as a table, a chart, a number card or a form."
+            description="Pick an endpoint and Argent will suggest whether it works best as a table, a chart, a number card or a form."
             action={
               <Link href="/objects/new">
                 <Button>

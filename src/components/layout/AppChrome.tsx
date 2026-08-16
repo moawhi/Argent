@@ -3,13 +3,13 @@
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { PanelLeftOpen } from "lucide-react";
-import { SeeItMark } from "@/components/brand/SeeItLogo";
+import { ArgentMark } from "@/components/brand/ArgentLogo";
 import { AppSidebar } from "@/components/layout/AppSidebar";
 import type { AppSection } from "@/lib/auth/sections";
 import type { ThemeId } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
-const SIDEBAR_STORAGE_KEY = "seeit-sidebar-open";
+const SIDEBAR_STORAGE_KEY = "argent-sidebar-open";
 const MOBILE_MQ = "(max-width: 767px)";
 
 export function AppChrome({
@@ -122,7 +122,7 @@ export function AppChrome({
             aria-label="Open sidebar"
             className="absolute left-3 top-3 z-30 flex h-9 items-center gap-1.5 rounded-lg border border-line bg-surface px-1.5 text-ink-soft shadow-sm transition-colors hover:bg-canvas hover:text-ink"
           >
-            <SeeItMark size={22} variant="pastel" />
+            <ArgentMark size={22} variant="pastel" />
             <PanelLeftOpen className="size-3.5" />
           </button>
         ) : null}

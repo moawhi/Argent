@@ -36,7 +36,7 @@ export default async function ConnectionsPage() {
     <>
       <PageHeader
         title="Connections"
-        description="Each connection is an API or database seeIt can read from. Credentials stay encrypted on the server."
+        description="Each connection is an API or database Argent can read from. Credentials stay encrypted on the server."
         actions={
           <Link href="/connections/new">
             <Button>

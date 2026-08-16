@@ -1,4 +1,4 @@
-# seeIt
+# Argent
 
 Import an OpenAPI (Swagger) document — or connect PostgreSQL, MariaDB or
 ClickHouse — and turn your existing backend APIs into **hosted MCP servers** for
@@ -13,14 +13,14 @@ comes up.
 
 | Area                | What you get                                                                                        |
 | ------------------- | --------------------------------------------------------------------------------------------------- |
-| **MCP servers**     | Enable a hosted MCP endpoint per API connection, select tools, mint bearer tokens for Cursor/Claude. |
+| **MCP servers**     | Named tool packs at `/mcp` that mix endpoints from multiple API connections; a sample MCP ships with the bundled demo. |
 | **Connections**     | Connect an HTTP API from OpenAPI, or a SQL database (Postgres / MariaDB / ClickHouse). Credentials encrypted; headers for APIs. |
 | **Databases**       | Map schemas after connect, write SQL with `{{parameters}}`, save queries, build objects from the rows. |
 | **API Explorer**    | Every endpoint grouped by tag, with a "Try it" runner and per-endpoint success rate.                 |
 | **Objects**         | Turn an endpoint or SQL query into a table, chart, KPI card, form or action button, with a live preview. |
 | **Row buttons**     | Give a table a toolbar per row — view, edit, delete, or any endpoint — each opening a pop-up.        |
 | **Dashboards**      | Drag-and-resize grid, dashboard-wide filters, and row selection that feeds an edit form.             |
-| **Help & Docs**     | Reference pages generated from your own API set, plus editable notes.                                |
+| **Help & Docs**     | Guides on APIs, OpenAPI, and MCP, plus reference pages from your specs.                                |
 | **Request Builder** | A Postman-style editor for endpoints your spec does not cover. Saved requests become objects too.    |
 
 ## Requirements
@@ -56,23 +56,51 @@ opens that link, sign-in is blocked. Without `RESEND_API_KEY` in development,
 the link is shown once in the UI instead.
 
 `npm run setup` seeds default roles (Admin, Dev, Sales, Client) with section
-grants, plus a demo connection from `fixtures/adlogic.yaml` and a sample
+grants, plus a demo connection from `fixtures/demo.yaml` and a sample
 dashboard. You can also install the demo from the home page with **Load the
 example**, and remove it again by deleting the connection.
 
 ### About the demo
 
-`fixtures/adlogic.yaml` describes the AdLogic affiliate API: 32 endpoints across
+`fixtures/demo.yaml` describes a sample affiliate API: 32 endpoints across
 Accounts, Account Groups, Campaigns, Campaign Groups, Stats and Commission
 Reports, authenticated with `apiu` and `apik` query parameters.
 
-Its base URL points at `/api/demo`, a mock implementation that ships with seeIt
+Its base URL points at `/api/demo`, a mock implementation that ships with Argent
 (`src/server/demo/data.ts`), so the whole flow — import, credentials, gateway,
 charts, editing — works offline against generated but stable figures. Writes are
 enabled on the demo connection because the mock API is a local sandbox; real
 connections start read-only.
 
 Set `DEMO_API_BASE_URL` before seeding to point the same spec at a real server.
+
+### Sample MCP (`sample`)
+
+Loading the demo also creates a hosted MCP server at `/api/mcp/sample`
+with curated read tools (`listAccounts`, `getAccount`, `listCampaigns`,
+`getStatsSummary`, …). Mint a token under **MCP → Sample MCP**, then add
+it to Cursor / Claude:
+
+```json
+{
+  "mcpServers": {
+    "argent-sample": {
+      "url": "http://localhost:3000/api/mcp/sample",
+      "headers": {
+        "Authorization": "Bearer argent_mcp_YOUR_TOKEN"
+      }
+    }
+  }
+}
+```
+
+Example prompts once connected:
+
+- “Using the sample MCP, list all affiliate accounts and summarize how many there are.”
+- “Call getAccount with id 1 and tell me the account name and status.”
+- “Fetch getStatsSummary and getDailyStats, then explain whether performance is trending up or down.”
+
+The sample MCP page in the app shows copyable prompts and tool-call examples.
 
 ### Using your own PostgreSQL
 
@@ -89,11 +117,11 @@ DATABASE_URL="postgresql://user:password@localhost:5432/seeit?schema=public"
 | ----------------------- | -------- | ----------------------------------------------------------------------------- |
 | `DATABASE_URL`          | yes      | PostgreSQL connection string.                                                  |
 | `APP_MASTER_KEY`        | yes      | Base64 32-byte key for AES-256-GCM encryption of upstream credentials.         |
-| `SESSION_SECRET`        | recommended | Signs the `seeit_session` login cookie. Falls back to `APP_MASTER_KEY` if empty. |
+| `SESSION_SECRET`        | recommended | Signs the `argent_session` login cookie. Falls back to `APP_MASTER_KEY` if empty. |
 | `GATEWAY_ALLOWED_HOSTS` | no*      | Comma-separated hostname allowlist for HTTP *and* database hosts. Empty = any (dev). *Required in any shared/public deploy. |
 | `APP_URL`               | yes in prod | Public origin for demo mock URL + verification / password-reset links.      |
 | `RESEND_API_KEY`        | yes in prod | Resend API key for verification and password-reset email.                   |
-| `EMAIL_FROM`            | recommended | From address, e.g. `seeIt <noreply@yourdomain.com>` (verified domain).      |
+| `EMAIL_FROM`            | recommended | From address, e.g. `Argent <noreply@yourdomain.com>` (verified domain).      |
 | `ALLOW_PUBLIC_SIGNUP`   | no       | Public `/signup` (default on). Set `false` to require admin-created users.     |
 | `SIGNUP_DEFAULT_ROLE`   | no       | Role for public sign-ups: `client` (default), `sales`, or `dev` (never admin). |
 | `DEMO_API_BASE_URL`     | no       | Override the demo connection's base URL to aim the bundled spec elsewhere.     |
@@ -123,7 +151,7 @@ be prompted to re-enter them.
 
 ## Deploying on Railway
 
-seeIt needs a long-running Node server (gateway, bcrypt, Prisma) and PostgreSQL.
+Argent needs a long-running Node server (gateway, bcrypt, Prisma) and PostgreSQL.
 Railway fits that well.
 
 1. Push this repo to GitHub.
@@ -185,7 +213,7 @@ an upstream URL, a header, a SQL password, or a secret.
 
 ```
 prisma/schema.prisma          Data model
-fixtures/adlogic.yaml         Demo OpenAPI document used by the seed
+fixtures/demo.yaml            Demo OpenAPI document used by the seed
 src/app/                      Routes (App Router)
   api/                        Route handlers, including the gateway
   connections/                Import wizard and connection management
@@ -193,7 +221,7 @@ src/app/                      Routes (App Router)
   objects/                    Object builder and library
   dashboards/                 Dashboard viewer and editor
   requests/                   Postman-style manual request builder
-  docs/                       Generated reference pages
+  docs/                       Guides plus generated reference pages
 src/server/
   crypto.ts                   AES-256-GCM secret vault
   openapi/                    Spec ingest, normalization, schema inference

@@ -42,7 +42,7 @@ export const SECTION_META: Record<
   docs: {
     label: "Help & Docs",
     href: "/docs",
-    hint: "Guides from APIs and database catalogs",
+    hint: "Guides plus reference from your APIs",
   },
   users: {
     label: "Users",

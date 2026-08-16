@@ -19,6 +19,7 @@ function revalidateDemoPaths() {
   revalidatePath("/dashboards");
   revalidatePath("/docs");
   revalidatePath("/objects");
+  revalidatePath("/mcp");
 }
 
 export async function loadDemoAction(): Promise<{
@@ -28,7 +29,7 @@ export async function loadDemoAction(): Promise<{
 }> {
   try {
     const user = await requireUser();
-    const result = await seedDemo();
+    const result = await seedDemo(user.id);
 
     // Loading the demo also un-hides it for this user.
     if (user.hideDemo) {
@@ -36,6 +37,7 @@ export async function loadDemoAction(): Promise<{
     }
 
     revalidateDemoPaths();
+    revalidatePath("/mcp");
 
     return { ok: true, result };
   } catch (error) {

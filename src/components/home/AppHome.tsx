@@ -82,16 +82,25 @@ export async function AppHome({ user }: { user: SessionUser }) {
   return (
     <>
       <PageHeader
-        title="Welcome to seeIt"
-        description="Point it at an API description file and build dashboards from what it finds — no code, and your keys never leave the server."
+        title="Welcome to Argent"
+        description="Import an OpenAPI spec, pick endpoints for agents, and get a hosted MCP URL — dashboards come along for free."
         actions={
-          showConnections ? (
-            <Link href="/connections/new">
-              <Button>
-                <Plug /> Connect an API
-              </Button>
-            </Link>
-          ) : null
+          <div className="flex flex-wrap gap-2">
+            {showDocs ? (
+              <Link href="/docs/guides">
+                <Button variant="secondary">
+                  <BookOpen /> Guides
+                </Button>
+              </Link>
+            ) : null}
+            {showConnections ? (
+              <Link href="/connections/new">
+                <Button>
+                  <Plug /> Connect an API
+                </Button>
+              </Link>
+            ) : null}
+          </div>
         }
       />
 
@@ -107,7 +116,7 @@ export async function AppHome({ user }: { user: SessionUser }) {
             </p>
             <p className="mt-1 text-xs leading-relaxed text-ink-soft">
               <code className="font-mono">APP_MASTER_KEY</code> is not set, so
-              seeIt cannot encrypt API keys. Add one to your{" "}
+              Argent cannot encrypt API keys. Add one to your{" "}
               <code className="font-mono">.env</code> file and restart:
             </p>
             <pre className="mt-2 overflow-auto rounded-md bg-ink px-3 py-2 font-mono text-[11px] text-canvas">
@@ -123,9 +132,9 @@ export async function AppHome({ user }: { user: SessionUser }) {
                 Want to see it working first?
               </p>
               <p className="mt-1 max-w-xl text-xs leading-relaxed text-ink-soft">
-                Load the bundled AdLogic example: 32 endpoints, saved sign-in
+                Load the bundled sample: 32 endpoints, saved sign-in
                 details, nine ready-made tiles and a finished dashboard. It runs
-                against a mock API inside seeIt, so nothing leaves this machine,
+                against a mock API inside Argent, so nothing leaves this machine,
                 and you can delete it from the connection&apos;s settings
                 whenever you like.
               </p>
@@ -145,7 +154,7 @@ export async function AppHome({ user }: { user: SessionUser }) {
         {user.hideDemo && installed && !admin && canAccessSection(user, "dashboards") ? (
           <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
             <p className="text-sm text-ink-soft">
-              You hid the bundled AdLogic example.
+              You hid the bundled sample.
             </p>
             <ShowDemoButton />
           </Card>
@@ -269,8 +278,8 @@ export async function AppHome({ user }: { user: SessionUser }) {
               <ShortcutCard
                 href="/docs"
                 icon={<BookOpen className="size-4" />}
-                title="Read the docs"
-                description="Reference pages generated from your own APIs."
+                title="Guides & docs"
+                description="What APIs, OpenAPI, and MCP are — plus reference from your connections."
               />
             ) : null}
           </section>

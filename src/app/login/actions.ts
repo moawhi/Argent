@@ -352,7 +352,17 @@ export async function onboardingCompleteAction(
   redirect(safeNextPath(nextPath) ?? "/");
 }
 
-export async function onboardingCompleteAndLoadDemoAction(): Promise<AuthFormState> {
+export async function onboardingCompleteAndLoadDemoAction(): Promise<
+  AuthFormState & {
+    mcp?: {
+      serverId: string;
+      slug: string;
+      name: string;
+      rawToken: string;
+      dashboardSlug: string;
+    };
+  }
+> {
   const user = await getSessionUser();
   if (!user) redirect("/login");
 
@@ -369,14 +379,26 @@ export async function onboardingCompleteAndLoadDemoAction(): Promise<AuthFormSta
   await completeOnboarding(user.id);
 
   const { seedDemo } = await import("@/server/demo/seed");
+  const { seedSampleMcpWithToken } = await import("@/server/mcp/sample");
   const { revalidatePath } = await import("next/cache");
   try {
-    const result = await seedDemo();
+    const result = await seedDemo(user.id);
+    const mcp = await seedSampleMcpWithToken(user.id);
     revalidatePath("/");
     revalidatePath("/connections");
     revalidatePath("/dashboards");
     revalidatePath("/objects");
-    redirect(`/dashboards/${result.dashboardSlug}`);
+    revalidatePath("/mcp");
+    return {
+      message: "demo-ready",
+      mcp: {
+        serverId: mcp.serverId,
+        slug: mcp.slug,
+        name: mcp.name,
+        rawToken: mcp.rawToken,
+        dashboardSlug: result.dashboardSlug,
+      },
+    };
   } catch (error) {
     return {
       error:

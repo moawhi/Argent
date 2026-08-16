@@ -13,15 +13,20 @@ import { DEMO_CREDENTIALS } from "./data";
 import {
   DEMO_CONNECTION_NAME,
   DEMO_DASHBOARD_SLUG,
+  demoConnectionNameWhere,
 } from "@/server/demo/access";
 import { daysAgo, isoDate } from "@/lib/utils";
 import type { RowAction, RowActionInput } from "@/lib/objects/types";
 import type { Prisma } from "@prisma/client";
+import {
+  ensureSampleMcpServer,
+  SAMPLE_MCP_SLUGS,
+} from "@/server/mcp/sample";
 
 export { DEMO_CONNECTION_NAME, DEMO_DASHBOARD_SLUG };
 
 /**
- * The bundled demo points at seeIt's own mock AdLogic API, so everything works
+ * The bundled demo points at Argent's own mock sample API, so everything works
  * with no external service. Override with DEMO_API_BASE_URL to aim the same
  * spec at a real server.
  */
@@ -33,7 +38,7 @@ function demoBaseUrl(): string {
 }
 
 async function readFixture(): Promise<string> {
-  return readFile(path.join(process.cwd(), "fixtures", "adlogic.yaml"), "utf8");
+  return readFile(path.join(process.cwd(), "fixtures", "demo.yaml"), "utf8");
 }
 
 /* ------------------------------------------------------------------ *
@@ -771,100 +776,155 @@ async function resolveRowActions(
 
 export async function isDemoInstalled(): Promise<boolean> {
   const existing = await prisma.connection.findFirst({
-    where: { name: DEMO_CONNECTION_NAME },
+    where: demoConnectionNameWhere(),
     select: { id: true },
   });
   return existing !== null;
 }
 
-/** Removes the demo connection and everything that cascades from it. */
+/** Removes the demo connection and the sample MCP server. */
 export async function removeDemo(): Promise<void> {
   const connection = await prisma.connection.findFirst({
-    where: { name: DEMO_CONNECTION_NAME },
+    where: demoConnectionNameWhere(),
     select: { id: true },
   });
   if (!connection) return;
 
+  await prisma.mcpServer.deleteMany({
+    where: { slug: { in: [...SAMPLE_MCP_SLUGS] } },
+  });
   await prisma.dashboard.deleteMany({ where: { connectionId: connection.id } });
   await prisma.connection.delete({ where: { id: connection.id } });
 }
 
 /**
- * Installs the bundled AdLogic demo: the spec, saved credentials, ready-made
- * objects and a dashboard with KPIs, charts and tables.
+ * Installs the bundled sample API: the spec, saved credentials, ready-made
+ * objects, a dashboard, and the sample MCP server (slug `sample`).
  *
  * If the demo is already installed, objects and the dashboard layout are
  * rebuilt from the latest seed definitions (connection + credentials stay).
  */
-export async function seedDemo(): Promise<SeedResult> {
+export async function seedDemo(createdById?: string): Promise<SeedResult> {
   const existing = await prisma.connection.findFirst({
-    where: { name: DEMO_CONNECTION_NAME },
+    where: demoConnectionNameWhere(),
     include: { _count: { select: { operations: true, dataObjects: true } } },
   });
 
+  let connectionId: string;
+  let operationCount: number;
+  let objectCount: number;
+  let alreadyExisted: boolean;
+
   if (existing) {
-    const { operationCount, objectCount } = await rebuildDemoDashboard(
-      existing.id,
-    );
-    return {
-      connectionId: existing.id,
-      dashboardSlug: DEMO_DASHBOARD_SLUG,
-      operationCount,
-      objectCount,
-      alreadyExisted: true,
-    };
+    const rawSpec = await readFixture();
+    let slug = existing.slug;
+    if (slug.includes("adlogic")) {
+      const taken = await prisma.connection.findUnique({
+        where: { slug: "sample-api" },
+        select: { id: true },
+      });
+      if (!taken || taken.id === existing.id) slug = "sample-api";
+    }
+    await prisma.connection.update({
+      where: { id: existing.id },
+      data: {
+        name: DEMO_CONNECTION_NAME,
+        slug,
+        specTitle: "Sample API",
+        rawSpec,
+        description:
+          "A complete, working example. It talks to a mock sample API built " +
+          "into Argent, so nothing leaves this machine.",
+      },
+    });
+    await prisma.docPage.updateMany({
+      where: {
+        connectionId: existing.id,
+        scope: "overview",
+        title: "About this demo",
+      },
+      data: {
+        bodyMarkdown:
+          "This connection points at a mock sample API bundled with Argent. " +
+          "The figures are generated, but everything else — the import, the " +
+          "gateway, the objects and the dashboard — is the real thing. Sign in " +
+          "details are already saved, so the Try it panel works straight away.",
+      },
+    });
+    const rebuilt = await rebuildDemoDashboard(existing.id);
+    connectionId = existing.id;
+    operationCount = rebuilt.operationCount;
+    objectCount = rebuilt.objectCount;
+    alreadyExisted = true;
+  } else {
+    const rawSpec = await readFixture();
+
+    const { connection } = await createConnectionFromSpec({
+      name: DEMO_CONNECTION_NAME,
+      rawSpec,
+      specFormat: "yaml",
+      baseUrl: demoBaseUrl(),
+      // The demo API is a local sandbox, so the update form is usable right away.
+      readOnly: false,
+    });
+
+    await saveCredentials(connection.id, [
+      { name: "apiu", in: "query", value: DEMO_CREDENTIALS.apiu },
+      { name: "apik", in: "query", value: DEMO_CREDENTIALS.apik },
+    ]);
+
+    await prisma.connection.update({
+      where: { id: connection.id },
+      data: {
+        description:
+          "A complete, working example. It talks to a mock sample API built " +
+          "into Argent, so nothing leaves this machine.",
+        variables: { defaultTimezone: "UTC" } as Prisma.InputJsonValue,
+      },
+    });
+
+    const rebuilt = await rebuildDemoDashboard(connection.id);
+
+    await prisma.docPage.create({
+      data: {
+        connectionId: connection.id,
+        scope: "overview",
+        targetKey: "",
+        title: "About this demo",
+        bodyMarkdown:
+          "This connection points at a mock sample API bundled with Argent. " +
+          "The figures are generated, but everything else — the import, the " +
+          "gateway, the objects and the dashboard — is the real thing. Sign in " +
+          "details are already saved, so the Try it panel works straight away.",
+      },
+    });
+
+    connectionId = connection.id;
+    operationCount = rebuilt.operationCount;
+    objectCount = rebuilt.objectCount;
+    alreadyExisted = false;
   }
 
-  const rawSpec = await readFixture();
+  const ownerId =
+    createdById ??
+    (
+      await prisma.user.findFirst({
+        where: { role: { key: "admin" }, active: true },
+        orderBy: { createdAt: "asc" },
+        select: { id: true },
+      })
+    )?.id;
 
-  const { connection } = await createConnectionFromSpec({
-    name: DEMO_CONNECTION_NAME,
-    rawSpec,
-    specFormat: "yaml",
-    baseUrl: demoBaseUrl(),
-    // The demo API is a local sandbox, so the update form is usable right away.
-    readOnly: false,
-  });
-
-  await saveCredentials(connection.id, [
-    { name: "apiu", in: "query", value: DEMO_CREDENTIALS.apiu },
-    { name: "apik", in: "query", value: DEMO_CREDENTIALS.apik },
-  ]);
-
-  await prisma.connection.update({
-    where: { id: connection.id },
-    data: {
-      description:
-        "A complete, working example. It talks to a mock AdLogic API built " +
-        "into seeIt, so nothing leaves this machine.",
-      variables: { defaultTimezone: "UTC" } as Prisma.InputJsonValue,
-    },
-  });
-
-  const { operationCount, objectCount } = await rebuildDemoDashboard(
-    connection.id,
-  );
-
-  await prisma.docPage.create({
-    data: {
-      connectionId: connection.id,
-      scope: "overview",
-      targetKey: "",
-      title: "About this demo",
-      bodyMarkdown:
-        "This connection points at a mock AdLogic API bundled with seeIt. " +
-        "The figures are generated, but everything else — the import, the " +
-        "gateway, the objects and the dashboard — is the real thing. Sign in " +
-        "details are already saved, so the Try it panel works straight away.",
-    },
-  });
+  if (ownerId) {
+    await ensureSampleMcpServer(ownerId);
+  }
 
   return {
-    connectionId: connection.id,
+    connectionId,
     dashboardSlug: DEMO_DASHBOARD_SLUG,
     operationCount,
     objectCount,
-    alreadyExisted: false,
+    alreadyExisted,
   };
 }
 

@@ -70,12 +70,17 @@ function ModalBody({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") onClose();
     };
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onKey);
+    };
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
         className="absolute inset-0 bg-ink/30 backdrop-blur-[1px]"
         onClick={onClose}
@@ -86,33 +91,38 @@ function ModalBody({
         aria-modal="true"
         aria-label={title}
         className={cn(
-          "animate-fade-in relative flex max-h-[85vh] w-full flex-col overflow-hidden rounded-xl border border-line bg-surface shadow-xl",
+          "animate-fade-in relative flex max-h-[min(92dvh,920px)] w-full flex-col overflow-hidden rounded-t-2xl border border-line bg-surface shadow-xl sm:max-h-[85vh] sm:rounded-xl",
           WIDTH[size],
         )}
       >
-        <div className="flex items-start gap-2.5 border-b border-line px-4 py-3">
+        <div className="flex shrink-0 items-start gap-3 border-b border-line px-4 py-3.5 sm:px-5 sm:py-4">
           {icon ? <span className="mt-0.5 shrink-0">{icon}</span> : null}
           <div className="min-w-0 flex-1">
-            <h3 className="truncate text-sm font-semibold text-ink">{title}</h3>
+            <h3 className="text-base font-semibold leading-snug text-ink sm:text-sm">
+              {title}
+            </h3>
             {description ? (
-              <div className="mt-0.5 text-xs leading-relaxed text-ink-soft">
+              <div className="mt-1 text-xs leading-relaxed text-ink-soft">
                 {description}
               </div>
             ) : null}
           </div>
           <button
+            type="button"
             onClick={onClose}
             aria-label="Close"
-            className="rounded p-1 text-ink-faint hover:bg-canvas hover:text-ink"
+            className="rounded-md p-1.5 text-ink-faint hover:bg-canvas hover:text-ink"
           >
             <X className="size-4" />
           </button>
         </div>
 
-        <div className="min-h-0 flex-1 overflow-y-auto">{children}</div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:px-5 sm:py-5">
+          {children}
+        </div>
 
         {footer ? (
-          <div className="flex items-center justify-end gap-2 border-t border-line bg-canvas px-4 py-3">
+          <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-line bg-canvas px-4 py-3 sm:px-5">
             {footer}
           </div>
         ) : null}

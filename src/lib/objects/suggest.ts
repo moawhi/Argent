@@ -179,7 +179,7 @@ export function suggestObjects(input: SuggestionInput): ObjectSuggestion[] {
       kind: "form",
       name:
         method === "POST" ? `New ${singular(subject)}` : `Update ${singular(subject)}`,
-      reason: `The API accepts ${input.requestFields.length} field${input.requestFields.length === 1 ? "" : "s"}, so seeIt can build the input boxes for you.`,
+      reason: `The API accepts ${input.requestFields.length} field${input.requestFields.length === 1 ? "" : "s"}, so Argent can build the input boxes for you.`,
       score: 95,
       config: buildFormConfig(input.requestFields, method, subject),
     });
@@ -200,7 +200,7 @@ export function suggestObjects(input: SuggestionInput): ObjectSuggestion[] {
       kind: "table",
       name: subject,
       reason:
-        "seeIt could not tell what this returns, so it will show whatever comes back as a table.",
+        "Argent could not tell what this returns, so it will show whatever comes back as a table.",
       score: 20,
       config: buildTableConfig(fields),
     });
@@ -404,7 +404,7 @@ export function buildActionConfig(
     label: destructive ? `Delete ${name}` : `Run ${name}`,
     confirmTitle: destructive ? `Delete this ${name}?` : `Run this request?`,
     confirmText: destructive
-      ? `This permanently removes the ${name} from the connected API. It cannot be undone from seeIt.`
+      ? `This permanently removes the ${name} from the connected API. It cannot be undone from Argent.`
       : `This sends a ${method} request to the connected API.`,
     successMessage: destructive ? `${singular(subject)} deleted.` : "Done.",
     variant: destructive ? "danger" : "primary",

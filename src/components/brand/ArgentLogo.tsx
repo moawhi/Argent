@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useId } from "react";
+import { APP_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
 type LogoSize = "sm" | "md" | "lg" | "xl";
@@ -18,11 +19,11 @@ const SIZE = {
  * Three glossy number cards — mint / sand / sky — overlapping and bridged so
  * they read as one interconnected mark (Aave-card gloss + KPI metaphor).
  */
-export function SeeItMark({
+export function ArgentMark({
   size = 28,
   variant = "pastel",
   className,
-  title = "seeIt",
+  title = APP_NAME,
 }: {
   size?: number;
   variant?: LogoVariant;
@@ -124,7 +125,6 @@ export function SeeItMark({
         </linearGradient>
       </defs>
 
-      {/* Interconnect bridges */}
       <path
         d="M12.5 14.2c2.4-1.1 5.4-1.2 8.4.4"
         stroke={link}
@@ -138,7 +138,6 @@ export function SeeItMark({
         strokeLinecap="round"
       />
 
-      {/* Card A — mint / top-left */}
       <g opacity={inkOpacity?.a}>
         <rect x="3.5" y="3.5" width="13.5" height="13.5" rx="3.2" fill={a} />
         <rect
@@ -153,7 +152,6 @@ export function SeeItMark({
         <rect x="6.2" y="10.1" width="7.8" height="3.1" rx="1" fill={digit} />
       </g>
 
-      {/* Card B — sand / bottom-left */}
       <g opacity={inkOpacity?.b}>
         <rect x="3.5" y="15" width="13.5" height="13.5" rx="3.2" fill={b} />
         <rect
@@ -168,7 +166,6 @@ export function SeeItMark({
         <rect x="6.2" y="21.6" width="7" height="3.1" rx="1" fill={digit} />
       </g>
 
-      {/* Card C — sky / right (front) */}
       <g opacity={inkOpacity?.c}>
         <rect x="15" y="9" width="13.5" height="13.5" rx="3.2" fill={c} />
         <rect
@@ -187,7 +184,7 @@ export function SeeItMark({
   );
 }
 
-export function SeeItWordmark({
+export function ArgentWordmark({
   size = "md",
   className,
 }: {
@@ -203,8 +200,8 @@ export function SeeItWordmark({
         className,
       )}
     >
-      see
-      <span className="text-[var(--landing-accent,var(--color-brand))]">It</span>
+      Arg
+      <span className="text-[var(--landing-accent,var(--color-brand))]">ent</span>
     </span>
   );
 }
@@ -225,13 +222,13 @@ function LogoInner({
   const s = SIZE[size];
   return (
     <span className={cn("inline-flex items-center", s.gap, className)}>
-      {wordmarkOnly ? null : <SeeItMark size={s.mark} variant={variant} />}
-      {markOnly ? null : <SeeItWordmark size={size} />}
+      {wordmarkOnly ? null : <ArgentMark size={s.mark} variant={variant} />}
+      {markOnly ? null : <ArgentWordmark size={size} />}
     </span>
   );
 }
 
-export function SeeItLogo({
+export function ArgentLogo({
   size = "md",
   variant = "pastel",
   markOnly = false,

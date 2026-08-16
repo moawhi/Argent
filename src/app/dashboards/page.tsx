@@ -55,7 +55,7 @@ export default async function DashboardsPage() {
         {user.hideDemo && installed && !admin ? (
           <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
             <p className="text-sm text-ink-soft">
-              You hid the bundled AdLogic example. It is still installed for
+              You hid the bundled sample. It is still installed for
               everyone else.
             </p>
             <ShowDemoButton />

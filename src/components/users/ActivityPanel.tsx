@@ -19,6 +19,7 @@ const ORIGIN_LABEL: Record<string, string> = {
   tryIt: "Try it",
   manual: "Request builder",
   test: "Connection test",
+  mcp: "MCP",
 };
 
 export function ActivityPanel({
@@ -61,7 +62,7 @@ export function ActivityPanel({
   return (
     <div className="space-y-4">
       <p className="text-sm text-ink-soft">
-        Recent API calls through seeIt. Open a row for redacted request and
+        Recent API calls through Argent. Open a row for redacted request and
         response details useful for troubleshooting.
       </p>
 
@@ -227,59 +228,67 @@ function ActivityDetailModal({
   if (!detail) return null;
 
   return (
-    <Modal
-      open
-      size="lg"
-      title="API call details"
-      onClose={onClose}
-    >
-      <div className="space-y-4 text-sm">
-        <dl className="grid gap-2 sm:grid-cols-2">
+    <Modal open size="lg" title="API call details" onClose={onClose}>
+      <div className="space-y-5 text-sm">
+        <dl className="grid gap-3 sm:grid-cols-2 sm:gap-x-6 sm:gap-y-3">
           <Detail label="When">
             {new Date(detail.createdAt).toLocaleString()}
           </Detail>
           <Detail label="User">
-            {detail.user
-              ? `${detail.user.name} <${detail.user.email}>`
-              : "Unknown / system"}
+            <span className="break-all">
+              {detail.user
+                ? `${detail.user.name} <${detail.user.email}>`
+                : "Unknown / system"}
+            </span>
           </Detail>
           <Detail label="Connection">{detail.connection.name}</Detail>
           <Detail label="Source">
             {ORIGIN_LABEL[detail.origin] ?? detail.origin}
           </Detail>
           <Detail label="Method / path">
-            <span className="inline-flex items-center gap-1.5">
+            <span className="inline-flex min-w-0 max-w-full flex-wrap items-center gap-1.5">
               <MethodBadge method={detail.method} />
-              <span className="font-mono text-xs">
+              <span className="min-w-0 break-all font-mono text-xs">
                 {detail.operation?.path ?? detail.url}
               </span>
             </span>
           </Detail>
           <Detail label="Result">
-            <Badge tone={detail.ok ? "positive" : "danger"}>
-              {detail.status ?? (detail.ok ? "ok" : "failed")}
-            </Badge>{" "}
-            <span className="text-ink-faint">
-              {formatDuration(detail.durationMs)}
+            <span className="inline-flex flex-wrap items-center gap-2">
+              <Badge tone={detail.ok ? "positive" : "danger"}>
+                {detail.status ?? (detail.ok ? "ok" : "failed")}
+              </Badge>
+              <span className="text-ink-faint">
+                {formatDuration(detail.durationMs)}
+              </span>
             </span>
           </Detail>
         </dl>
 
         {detail.error ? (
-          <p className="rounded-md bg-danger/10 px-3 py-2 text-xs text-danger">
+          <p className="rounded-lg bg-danger/10 px-3 py-2.5 text-xs leading-relaxed text-danger">
             {detail.error}
           </p>
         ) : null}
 
         <Detail label="URL (redacted)">
-          <code className="block break-all font-mono text-[11px] text-ink-soft">
+          <code className="mt-1 block break-all rounded-lg border border-line bg-canvas px-3 py-2 font-mono text-[11px] leading-relaxed text-ink-soft">
             {detail.url}
           </code>
         </Detail>
 
-        <JsonBlock label="Request params (redacted / truncated)" value={detail.requestParams} />
-        <JsonBlock label="Request body (redacted / truncated)" value={detail.requestBody} />
-        <JsonBlock label="Response (redacted / truncated)" value={detail.responseBody} />
+        <JsonBlock
+          label="Request params (redacted / truncated)"
+          value={detail.requestParams}
+        />
+        <JsonBlock
+          label="Request body (redacted / truncated)"
+          value={detail.requestBody}
+        />
+        <JsonBlock
+          label="Response (redacted / truncated)"
+          value={detail.responseBody}
+        />
       </div>
     </Modal>
   );
@@ -293,9 +302,9 @@ function Detail({
   children: React.ReactNode;
 }) {
   return (
-    <div>
+    <div className="min-w-0">
       <dt className="text-[11px] font-medium text-ink-faint">{label}</dt>
-      <dd className="mt-0.5 text-ink">{children}</dd>
+      <dd className="mt-1 text-ink">{children}</dd>
     </div>
   );
 }
@@ -303,7 +312,7 @@ function Detail({
 function JsonBlock({ label, value }: { label: string; value: unknown }) {
   if (value === null || value === undefined) {
     return (
-      <div>
+      <div className="min-w-0">
         <p className="text-[11px] font-medium text-ink-faint">{label}</p>
         <p className="mt-1 text-xs text-ink-faint">None stored.</p>
       </div>
@@ -314,9 +323,9 @@ function JsonBlock({ label, value }: { label: string; value: unknown }) {
     typeof value === "string" ? value : JSON.stringify(value, null, 2);
 
   return (
-    <div>
+    <div className="min-w-0">
       <p className="text-[11px] font-medium text-ink-faint">{label}</p>
-      <pre className="mt-1 max-h-56 overflow-auto rounded-md border border-line bg-canvas p-2 font-mono text-[11px] text-ink-soft">
+      <pre className="mt-1 max-h-48 overflow-auto overscroll-contain rounded-lg border border-line bg-canvas p-3 font-mono text-[11px] leading-relaxed text-ink-soft sm:max-h-56">
         {text}
       </pre>
     </div>

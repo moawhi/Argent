@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/primitives";
 import { useLocalFlag } from "@/lib/use-local-flag";
 import { cn } from "@/lib/utils";
 
-const DISMISS_KEY = "seeit.onboarding.dismissed";
+const DISMISS_KEY = "argent.onboarding.dismissed";
 
 /**
  * First-run guide. Hides itself once all three steps are done, and can be
@@ -29,7 +29,7 @@ export function OnboardingChecklist({
       done: hasConnection,
       title: "Connect an API",
       description:
-        "Upload your Swagger or OpenAPI file. seeIt reads every endpoint and spots which values are your login details.",
+        "Upload your Swagger or OpenAPI file. Argent reads every endpoint and spots which values are your login details.",
       href: "/connections/new",
       cta: "Import a file",
     },
@@ -37,7 +37,7 @@ export function OnboardingChecklist({
       done: hasObject,
       title: "Build an object",
       description:
-        "Pick an endpoint and seeIt suggests whether it works best as a table, a chart, a number card or a form.",
+        "Pick an endpoint and Argent suggests whether it works best as a table, a chart, a number card or a form.",
       href: "/objects/new",
       cta: "Build one",
     },

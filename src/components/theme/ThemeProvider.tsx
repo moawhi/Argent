@@ -60,7 +60,7 @@ export function ThemeProvider({
 
   useServerInsertedHTML(() => (
     <script
-      id="seeit-theme-boot"
+      id="argent-theme-boot"
       dangerouslySetInnerHTML={{ __html: THEME_BOOT_SCRIPT }}
     />
   ));

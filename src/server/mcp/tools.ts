@@ -153,9 +153,13 @@ export function formatToolResult(payload: unknown): string {
   return `${text.slice(0, MAX_RESULT_CHARS)}\n…[truncated]`;
 }
 
-/** Ensure unique MCP tool names when operationKeys collide after sanitizing. */
+/** Ensure unique MCP tool names; on collision suffix with connection slug. */
 export function uniqueToolNames(
-  operations: { id: string; operationKey: string }[],
+  operations: {
+    id: string;
+    operationKey: string;
+    connectionSlug?: string;
+  }[],
 ): Map<string, string> {
   const used = new Set<string>();
   const map = new Map<string, string>();
@@ -163,8 +167,15 @@ export function uniqueToolNames(
   for (const op of operations) {
     let name = sanitizeToolName(op.operationKey);
     if (used.has(name)) {
-      const suffix = `_${op.id.slice(-6)}`;
+      const slugPart = op.connectionSlug
+        ? sanitizeToolName(op.connectionSlug)
+        : op.id.slice(-6);
+      const suffix = `_${slugPart}`;
       name = `${name.slice(0, MAX_TOOL_NAME - suffix.length)}${suffix}`;
+      if (used.has(name)) {
+        const idSuffix = `_${op.id.slice(-6)}`;
+        name = `${name.slice(0, MAX_TOOL_NAME - idSuffix.length)}${idSuffix}`;
+      }
     }
     used.add(name);
     map.set(op.id, name);

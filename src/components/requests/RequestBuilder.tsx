@@ -114,7 +114,7 @@ export function RequestBuilder({
 
   function promote() {
     if (!request.connectionId) {
-      setNotice("Pick a connection first, so seeIt knows where this belongs.");
+      setNotice("Pick a connection first, so Argent knows where this belongs.");
       return;
     }
 
@@ -369,7 +369,7 @@ export function RequestBuilder({
         open={confirmWrite}
         destructive={request.method.toUpperCase() === "DELETE"}
         title={`Send a ${request.method} request?`}
-        description="This is a real request to a real API and may change or remove data. seeIt cannot undo it."
+        description="This is a real request to a real API and may change or remove data. Argent cannot undo it."
         confirmLabel={`Send ${request.method}`}
         onCancel={() => setConfirmWrite(false)}
         onConfirm={() => {
@@ -427,7 +427,7 @@ function AuthEditor({
       {request.authMode === "inherit" ? (
         <p className="rounded-md bg-canvas px-2.5 py-2 text-[11px] text-ink-soft">
           {hasSecrets
-            ? `seeIt attaches ${connectionName}'s saved credentials on the server. They never reach your browser.`
+            ? `Argent attaches ${connectionName}'s saved credentials on the server. They never reach your browser.`
             : `${connectionName ?? "This connection"} has no saved credentials yet. Add them in the connection settings, or pick another option here.`}
         </p>
       ) : null}

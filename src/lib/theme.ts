@@ -32,8 +32,8 @@ export const THEME_OPTIONS: {
   },
 ];
 
-export const THEME_STORAGE_KEY = "seeit-theme";
-export const BRAND_COLOR_STORAGE_KEY = "seeit-brand-color";
+export const THEME_STORAGE_KEY = "argent-theme";
+export const BRAND_COLOR_STORAGE_KEY = "argent-brand-color";
 
 /** Inline boot script for SSR (injected via useServerInsertedHTML). */
 export const THEME_BOOT_SCRIPT = `(function(){try{var k=${JSON.stringify(THEME_STORAGE_KEY)};var p=localStorage.getItem(k)||'light';var r=p;if(p==='system'){r=window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';}document.documentElement.dataset.theme=r;document.documentElement.dataset.themePref=p;var b=localStorage.getItem(${JSON.stringify(BRAND_COLOR_STORAGE_KEY)});if(b&&/^#[0-9a-fA-F]{6}$/.test(b)){var s=document.documentElement.style;s.setProperty('--color-brand',b);s.setProperty('--color-brand-soft','color-mix(in oklab,'+b+' 16%, var(--color-surface))');s.setProperty('--color-brand-ink','color-mix(in oklab,'+b+' 72%, var(--color-ink))');}}catch(e){}})();`;

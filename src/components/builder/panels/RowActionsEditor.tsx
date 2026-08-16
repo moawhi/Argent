@@ -552,7 +552,7 @@ function InputMapping({
   if (slots.length === 0) {
     return (
       <p className="text-[11px] text-ink-faint">
-        This endpoint needs nothing beyond the credentials seeIt already adds.
+        This endpoint needs nothing beyond the credentials Argent already adds.
       </p>
     );
   }

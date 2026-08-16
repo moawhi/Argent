@@ -95,7 +95,7 @@ export function DatabaseWizard() {
         <div>
           <CardTitle>Database details</CardTitle>
           <p className="text-xs text-ink-soft">
-            seeIt tests the connection and maps schemas before saving. The
+            Argent tests the connection and maps schemas before saving. The
             password is encrypted and never shown again.
           </p>
         </div>
@@ -219,7 +219,7 @@ export function DatabaseWizard() {
               Allow changes to data
             </span>
             <span className="block text-xs text-ink-soft">
-              While this is off, seeIt only runs SELECT / SHOW style queries.
+              While this is off, Argent only runs SELECT / SHOW style queries.
             </span>
           </span>
         </label>

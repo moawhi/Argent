@@ -9,6 +9,7 @@ import {
 import { executeOperation } from "@/server/gateway/executor";
 import type { ParameterDescriptor } from "@/lib/openapi/types";
 import { isThemeId } from "@/lib/theme";
+import { slugify } from "@/lib/utils";
 import {
   buildToolInputSchema,
   formatToolResult,
@@ -22,9 +23,13 @@ export type McpSessionAuth = {
   tokenId: string;
   userId: string;
   mcpServerId: string;
-  connectionId: string;
+  slug: string;
   user: SessionUser;
 };
+
+export function slugifyMcpName(name: string): string {
+  return slugify(name).slice(0, 48) || "mcp-server";
+}
 
 export async function loadSessionUserById(
   userId: string,
@@ -57,155 +62,153 @@ export async function loadSessionUserById(
   };
 }
 
-export async function verifyMcpBearer(
-  connectionId: string,
-  bearerToken: string | undefined,
-): Promise<McpSessionAuth | null> {
-  if (!bearerToken) return null;
-
-  const hash = hashMcpToken(bearerToken);
-  const token = await prisma.mcpAccessToken.findUnique({
-    where: { tokenHash: hash },
+const serverInclude = {
+  tools: {
     include: {
-      mcpServer: {
+      operation: {
         select: {
           id: true,
-          enabled: true,
           connectionId: true,
-          connection: { select: { type: true } },
+          operationKey: true,
+          method: true,
+          path: true,
+          summary: true,
+          description: true,
+          tags: true,
+          params: true,
+          requestSchema: true,
+          source: true,
+          deprecated: true,
+          connection: { select: { id: true, name: true, slug: true, type: true } },
         },
       },
     },
-  });
+  },
+  tokens: {
+    where: { revokedAt: null },
+    orderBy: { createdAt: "desc" as const },
+    select: {
+      id: true,
+      name: true,
+      tokenPrefix: true,
+      createdAt: true,
+      lastUsedAt: true,
+      createdBy: { select: { id: true, name: true, email: true } },
+    },
+  },
+  _count: { select: { tools: true, tokens: true } },
+};
 
-  if (!token || token.revokedAt) return null;
-  if (!token.mcpServer.enabled) return null;
-  if (token.mcpServer.connectionId !== connectionId) return null;
-  if (token.mcpServer.connection.type !== "api") return null;
-
-  const user = await loadSessionUserById(token.createdById);
-  if (!user) return null;
-
-  void prisma.mcpAccessToken
-    .update({
-      where: { id: token.id },
-      data: { lastUsedAt: new Date() },
-    })
-    .catch(() => undefined);
-
-  return {
-    tokenId: token.id,
-    userId: user.id,
-    mcpServerId: token.mcpServer.id,
-    connectionId: token.mcpServer.connectionId,
-    user,
-  };
-}
-
-export async function getMcpServerForConnection(connectionId: string) {
-  return prisma.mcpServer.findUnique({
-    where: { connectionId },
+export async function listMcpServers() {
+  return prisma.mcpServer.findMany({
+    orderBy: [{ isSample: "desc" }, { updatedAt: "desc" }],
     include: {
-      tools: {
-        include: {
-          operation: {
-            select: {
-              id: true,
-              operationKey: true,
-              method: true,
-              path: true,
-              summary: true,
-              description: true,
-              tags: true,
-              params: true,
-              requestSchema: true,
-              source: true,
-              deprecated: true,
-            },
-          },
-        },
-      },
-      tokens: {
-        where: { revokedAt: null },
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          tokenPrefix: true,
-          createdAt: true,
-          lastUsedAt: true,
-          createdBy: { select: { id: true, name: true, email: true } },
-        },
-      },
+      _count: { select: { tools: true, tokens: true } },
+      createdBy: { select: { id: true, name: true } },
     },
   });
 }
 
-export async function ensureMcpServer(
-  connectionId: string,
-  userId: string,
-) {
-  const connection = await prisma.connection.findUnique({
-    where: { id: connectionId },
-    select: { id: true, type: true },
+export async function getMcpServerById(id: string) {
+  return prisma.mcpServer.findUnique({
+    where: { id },
+    include: serverInclude,
   });
-  if (!connection) throw new Error("Connection not found.");
-  if (connection.type !== "api") {
-    throw new Error("MCP servers are only available for API connections.");
+}
+
+export async function getMcpServerBySlug(slug: string) {
+  return prisma.mcpServer.findUnique({
+    where: { slug },
+    include: serverInclude,
+  });
+}
+
+async function uniqueSlug(base: string, excludeId?: string): Promise<string> {
+  let candidate = base;
+  let n = 2;
+  for (;;) {
+    const existing = await prisma.mcpServer.findUnique({
+      where: { slug: candidate },
+      select: { id: true },
+    });
+    if (!existing || existing.id === excludeId) return candidate;
+    candidate = `${base.slice(0, 40)}-${n}`;
+    n += 1;
   }
+}
 
-  return prisma.mcpServer.upsert({
-    where: { connectionId },
-    create: {
-      connectionId,
-      createdById: userId,
+export async function createMcpServer(input: {
+  name: string;
+  userId: string;
+  slug?: string;
+}) {
+  const name = input.name.trim();
+  if (!name) throw new Error("Give the MCP server a name.");
+  const slug = await uniqueSlug(slugifyMcpName(input.slug ?? name));
+
+  return prisma.mcpServer.create({
+    data: {
+      name,
+      slug,
       enabled: true,
+      createdById: input.userId,
     },
-    update: {},
   });
 }
 
-export async function setMcpEnabled(
-  connectionId: string,
-  userId: string,
-  enabled: boolean,
+export async function updateMcpServer(
+  id: string,
+  data: { name?: string; enabled?: boolean },
 ) {
-  await ensureMcpServer(connectionId, userId);
+  const patch: { name?: string; enabled?: boolean } = {};
+  if (data.name !== undefined) {
+    const name = data.name.trim();
+    if (!name) throw new Error("Give the MCP server a name.");
+    patch.name = name;
+  }
+  if (data.enabled !== undefined) patch.enabled = data.enabled;
+
   return prisma.mcpServer.update({
-    where: { connectionId },
-    data: { enabled },
+    where: { id },
+    data: patch,
   });
 }
 
-export async function setMcpTools(
-  connectionId: string,
-  userId: string,
-  operationIds: string[],
-) {
-  const server = await ensureMcpServer(connectionId, userId);
+export async function deleteMcpServer(id: string) {
+  await prisma.mcpServer.delete({ where: { id } });
+}
+
+export async function setMcpTools(mcpServerId: string, operationIds: string[]) {
+  const server = await prisma.mcpServer.findUnique({
+    where: { id: mcpServerId },
+    select: { id: true },
+  });
+  if (!server) throw new Error("MCP server not found.");
 
   const uniqueIds = [...new Set(operationIds)];
   if (uniqueIds.length > 0) {
     const ops = await prisma.operation.findMany({
       where: {
         id: { in: uniqueIds },
-        connectionId,
         source: { not: "sql" },
+        connection: { type: "api" },
       },
       select: { id: true },
     });
     if (ops.length !== uniqueIds.length) {
-      throw new Error("One or more operations do not belong to this connection.");
+      throw new Error(
+        "One or more operations are missing or are not from an API connection.",
+      );
     }
   }
 
   await prisma.$transaction([
-    prisma.mcpServerTool.deleteMany({ where: { mcpServerId: server.id } }),
+    prisma.mcpServerTool.deleteMany({ where: { mcpServerId } }),
     ...(uniqueIds.length
       ? [
           prisma.mcpServerTool.createMany({
             data: uniqueIds.map((operationId) => ({
-              mcpServerId: server.id,
+              mcpServerId,
               operationId,
             })),
           }),
@@ -213,21 +216,26 @@ export async function setMcpTools(
       : []),
   ]);
 
-  return getMcpServerForConnection(connectionId);
+  return getMcpServerById(mcpServerId);
 }
 
 export async function createMcpAccessToken(
-  connectionId: string,
+  mcpServerId: string,
   userId: string,
   name: string,
 ) {
-  const server = await ensureMcpServer(connectionId, userId);
+  const server = await prisma.mcpServer.findUnique({
+    where: { id: mcpServerId },
+    select: { id: true },
+  });
+  if (!server) throw new Error("MCP server not found.");
+
   const minted = mintMcpToken();
   const label = name.trim() || "MCP client";
 
   const token = await prisma.mcpAccessToken.create({
     data: {
-      mcpServerId: server.id,
+      mcpServerId,
       name: label,
       tokenHash: minted.hash,
       tokenPrefix: minted.prefix,
@@ -246,13 +254,13 @@ export async function createMcpAccessToken(
 
 export async function revokeMcpAccessToken(
   tokenId: string,
-  connectionId: string,
+  mcpServerId: string,
 ) {
   const token = await prisma.mcpAccessToken.findUnique({
     where: { id: tokenId },
-    include: { mcpServer: { select: { connectionId: true } } },
+    select: { id: true, mcpServerId: true },
   });
-  if (!token || token.mcpServer.connectionId !== connectionId) {
+  if (!token || token.mcpServerId !== mcpServerId) {
     throw new Error("Token not found.");
   }
   await prisma.mcpAccessToken.update({
@@ -261,20 +269,60 @@ export async function revokeMcpAccessToken(
   });
 }
 
+export async function verifyMcpBearer(
+  slug: string,
+  bearerToken: string | undefined,
+): Promise<McpSessionAuth | null> {
+  if (!bearerToken) return null;
+
+  const hash = hashMcpToken(bearerToken);
+  const token = await prisma.mcpAccessToken.findUnique({
+    where: { tokenHash: hash },
+    include: {
+      mcpServer: {
+        select: { id: true, enabled: true, slug: true },
+      },
+    },
+  });
+
+  if (!token || token.revokedAt) return null;
+  if (!token.mcpServer.enabled) return null;
+  if (token.mcpServer.slug !== slug) return null;
+
+  const user = await loadSessionUserById(token.createdById);
+  if (!user) return null;
+
+  void prisma.mcpAccessToken
+    .update({
+      where: { id: token.id },
+      data: { lastUsedAt: new Date() },
+    })
+    .catch(() => undefined);
+
+  return {
+    tokenId: token.id,
+    userId: user.id,
+    mcpServerId: token.mcpServer.id,
+    slug: token.mcpServer.slug,
+    user,
+  };
+}
+
 export type McpToolDefinition = {
   operationId: string;
   name: string;
   description: string;
   method: string;
   path: string;
+  connectionSlug: string;
   inputSchema: ReturnType<typeof buildToolInputSchema>;
 };
 
-export async function listEnabledMcpTools(
-  connectionId: string,
-): Promise<McpToolDefinition[]> {
+export async function listEnabledMcpToolsBySlug(
+  slug: string,
+): Promise<{ serverName: string; tools: McpToolDefinition[] } | null> {
   const server = await prisma.mcpServer.findUnique({
-    where: { connectionId },
+    where: { slug },
     include: {
       tools: {
         include: {
@@ -289,6 +337,7 @@ export async function listEnabledMcpTools(
               params: true,
               requestSchema: true,
               deprecated: true,
+              connection: { select: { slug: true, type: true } },
             },
           },
         },
@@ -296,25 +345,35 @@ export async function listEnabledMcpTools(
     },
   });
 
-  if (!server?.enabled) return [];
+  if (!server?.enabled) return null;
 
   const operations = server.tools
     .map((t) => t.operation)
-    .filter((op) => !op.deprecated);
+    .filter((op) => !op.deprecated && op.connection.type === "api");
 
-  const names = uniqueToolNames(operations);
+  const names = uniqueToolNames(
+    operations.map((op) => ({
+      id: op.id,
+      operationKey: op.operationKey,
+      connectionSlug: op.connection.slug,
+    })),
+  );
 
-  return operations.map((op) => {
-    const params = (op.params as unknown as ParameterDescriptor[]) ?? [];
-    return {
-      operationId: op.id,
-      name: names.get(op.id)!,
-      description: toolDescription(op),
-      method: op.method,
-      path: op.path,
-      inputSchema: buildToolInputSchema(params, op.requestSchema),
-    };
-  });
+  return {
+    serverName: server.name,
+    tools: operations.map((op) => {
+      const params = (op.params as unknown as ParameterDescriptor[]) ?? [];
+      return {
+        operationId: op.id,
+        name: names.get(op.id)!,
+        description: toolDescription(op),
+        method: op.method,
+        path: op.path,
+        connectionSlug: op.connection.slug,
+        inputSchema: buildToolInputSchema(params, op.requestSchema),
+      };
+    }),
+  };
 }
 
 export async function invokeMcpTool(opts: {
@@ -343,22 +402,23 @@ export async function invokeMcpTool(opts: {
     },
   });
 
-  if (!link || link.operation.connectionId !== auth.connectionId) {
+  if (!link) {
     return {
       ok: false,
       text: "This tool is not enabled on this MCP server.",
     };
   }
 
+  const connectionId = link.operation.connectionId;
   const allowed = await canCallOperation(
     auth.user,
-    auth.connectionId,
+    connectionId,
     operationId,
   );
   if (!allowed) {
     await logDeniedApiCall({
       userId: auth.userId,
-      connectionId: auth.connectionId,
+      connectionId,
       operationId,
       method: link.operation.method,
       path: link.operation.path,
@@ -403,4 +463,25 @@ export async function invokeMcpTool(opts: {
       envelope: result.envelope,
     }),
   };
+}
+
+/** Operations available to pick as MCP tools, grouped for the editor. */
+export async function listApiOperationsForPicker() {
+  return prisma.operation.findMany({
+    where: {
+      source: { not: "sql" },
+      connection: { type: "api" },
+    },
+    orderBy: [{ connectionId: "asc" }, { sortOrder: "asc" }, { path: "asc" }],
+    select: {
+      id: true,
+      operationKey: true,
+      method: true,
+      path: true,
+      summary: true,
+      tags: true,
+      connectionId: true,
+      connection: { select: { id: true, name: true, slug: true } },
+    },
+  });
 }

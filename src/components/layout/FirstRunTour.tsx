@@ -15,7 +15,7 @@ import { LoadDemoButton } from "./LoadDemoButton";
 import { useLocalFlag } from "@/lib/use-local-flag";
 import { cn } from "@/lib/utils";
 
-const SEEN_KEY = "seeit.tour.seen";
+const SEEN_KEY = "argent.tour.seen";
 
 interface Step {
   icon: LucideIcon;
@@ -28,13 +28,13 @@ const STEPS: Step[] = [
     icon: Plug,
     title: "Start with your API description file",
     body:
-      "Upload the Swagger or OpenAPI file your developers gave you, or paste a link to it. seeIt reads every endpoint out of it and works out which values are your sign-in details, so you only type them once.",
+      "Upload the Swagger or OpenAPI file your developers gave you, or paste a link to it. Argent reads every endpoint out of it and works out which values are your sign-in details, so you only type them once.",
   },
   {
     icon: Boxes,
     title: "Turn an endpoint into something you can look at",
     body:
-      "Pick an endpoint and seeIt suggests what it is best shown as — a table of records, a chart over time, a single headline number, or a form for making changes. You adjust it beside a live preview of your real data.",
+      "Pick an endpoint and Argent suggests what it is best shown as — a table of records, a chart over time, a single headline number, or a form for making changes. You adjust it beside a live preview of your real data.",
   },
   {
     icon: LayoutDashboard,
@@ -46,12 +46,12 @@ const STEPS: Step[] = [
     icon: ShieldCheck,
     title: "Your keys never reach the browser",
     body:
-      "Every call goes out from seeIt's own server, which holds your credentials encrypted and adds them on the way past. New connections start read-only, so nothing can be changed by accident.",
+      "Every call goes out from Argent's own server, which holds your credentials encrypted and adds them on the way past. New connections start read-only, so nothing can be changed by accident.",
   },
 ];
 
 /**
- * Shown once, the first time someone opens seeIt on this machine. It explains
+ * Shown once, the first time someone opens Argent on this machine. It explains
  * the shape of the product before they hit a blank connections page.
  */
 export function FirstRunTour({ show }: { show: boolean }) {

@@ -185,7 +185,7 @@ export function TryItPanel({
         open={confirming}
         destructive={doc.method === "DELETE"}
         title={`Send this ${doc.method} request?`}
-        description={`${doc.plainSummary} This affects real data on the connected API and cannot be undone from seeIt.`}
+        description={`${doc.plainSummary} This affects real data on the connected API and cannot be undone from Argent.`}
         confirmLabel={`Yes, send ${doc.method}`}
         onCancel={() => setConfirming(false)}
         onConfirm={() => {

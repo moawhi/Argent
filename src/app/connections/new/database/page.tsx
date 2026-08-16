@@ -2,7 +2,7 @@ import { PageBody, PageHeader } from "@/components/layout/PageHeader";
 import { DatabaseWizard } from "@/components/connections/DatabaseWizard";
 import { requireSection } from "@/server/auth/permissions";
 
-export const metadata = { title: "Connect a database — seeIt" };
+export const metadata = { title: "Connect a database — Argent" };
 
 export default async function NewDatabaseConnectionPage() {
   await requireSection("connections");

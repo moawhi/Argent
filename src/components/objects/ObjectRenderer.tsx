@@ -220,7 +220,7 @@ export function ObjectRenderer({
   if (query.isError) {
     return (
       <ErrorState
-        message="seeIt could not load this data."
+        message="Argent could not load this data."
         detail={(query.error as Error)?.message}
         onRetry={() => query.refetch()}
       />

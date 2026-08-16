@@ -176,7 +176,7 @@ export function DocsShell({
                 <div className="min-w-0">
                   <CardTitle>Before you start</CardTitle>
                   <p className="text-xs text-ink-soft">
-                    How seeIt talks to {connectionName}.
+                    How Argent talks to {connectionName}.
                   </p>
                 </div>
               </CardHeader>
@@ -196,7 +196,7 @@ export function DocsShell({
                   <div>
                     <dt className="text-ink-faint">Credentials</dt>
                     <dd className="text-ink">
-                      Added automatically by seeIt on every request.
+                      Added automatically by Argent on every request.
                     </dd>
                   </div>
                 </dl>
@@ -296,7 +296,7 @@ function OperationSection({
 
         {doc.credentialParams.length > 0 ? (
           <p className="rounded-md bg-canvas px-2.5 py-2 text-[11px] text-ink-soft">
-            seeIt supplies{" "}
+            Argent supplies{" "}
             {doc.credentialParams.map((param) => param.name).join(" and ")}{" "}
             automatically. You never need to include them.
           </p>

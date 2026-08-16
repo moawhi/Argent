@@ -61,7 +61,7 @@ export async function sendManualRequestAction(
       contentType: null,
       error: {
         kind: "config",
-        message: "seeIt could not send that request.",
+        message: "Argent could not send that request.",
         detail: describeError(error),
       },
     };

@@ -61,7 +61,7 @@ export function UsersAdmin({
   const [editingId, setEditingId] = useState<string | null>(null);
 
   return (
-    <div className="space-y-6">
+    <div className="w-full min-w-0 space-y-6">
       <div className="flex flex-wrap gap-2 border-b border-line">
         {(
           [
@@ -88,8 +88,9 @@ export function UsersAdmin({
       </div>
 
       {tab === "people" ? (
-        <div className="grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="space-y-3">
+        <div className="w-full min-w-0 space-y-4">
+          <CreateUserCard roles={roles} />
+          <div className="min-w-0 space-y-3">
             {users.map((user) => (
               <UserCard
                 key={user.id}
@@ -105,12 +106,11 @@ export function UsersAdmin({
               <p className="text-sm text-ink-soft">No users yet.</p>
             ) : null}
           </div>
-          <CreateUserCard roles={roles} />
         </div>
       ) : null}
 
       {tab === "roles" ? (
-        <div className="space-y-4">
+        <div className="w-full min-w-0 space-y-3">
           {roles.map((role) => (
             <RoleCard key={role.id} role={role} />
           ))}
@@ -118,30 +118,34 @@ export function UsersAdmin({
       ) : null}
 
       {tab === "api" ? (
-        <ApiAccessPanel
-          connections={connections}
-          grantsByRole={grantsByRole}
-          grantsByUser={grantsByUser}
-          roles={roles.map((r) => ({ id: r.id, key: r.key, label: r.label }))}
-          users={users.map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-            role: { label: u.role.label },
-          }))}
-        />
+        <div className="w-full min-w-0">
+          <ApiAccessPanel
+            connections={connections}
+            grantsByRole={grantsByRole}
+            grantsByUser={grantsByUser}
+            roles={roles.map((r) => ({ id: r.id, key: r.key, label: r.label }))}
+            users={users.map((u) => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+              role: { label: u.role.label },
+            }))}
+          />
+        </div>
       ) : null}
 
       {tab === "activity" ? (
-        <ActivityPanel
-          users={users.map((u) => ({
-            id: u.id,
-            name: u.name,
-            email: u.email,
-          }))}
-          connections={connections.map((c) => ({ id: c.id, name: c.name }))}
-          initial={activity}
-        />
+        <div className="w-full min-w-0">
+          <ActivityPanel
+            users={users.map((u) => ({
+              id: u.id,
+              name: u.name,
+              email: u.email,
+            }))}
+            connections={connections.map((c) => ({ id: c.id, name: c.name }))}
+            initial={activity}
+          />
+        </div>
       ) : null}
     </div>
   );
@@ -151,33 +155,38 @@ function CreateUserCard({ roles }: { roles: RoleRow[] }) {
   const [state, action, pending] = useActionState(createUserAction, initial);
 
   return (
-    <form action={action} className="card h-fit space-y-3 border border-line p-4">
+    <form
+      action={action}
+      className="card w-full min-w-0 space-y-3 border border-line p-4"
+    >
       <h2 className="text-sm font-semibold">Add user</h2>
-      <Field label="Name">
-        <Input name="name" required />
-      </Field>
-      <Field label="Email">
-        <Input name="email" type="email" required />
-      </Field>
-      <Field label="Temporary password">
-        <Input name="password" type="password" required minLength={8} />
-      </Field>
-      <Field label="Role">
-        <Select name="roleId" required defaultValue={roles[0]?.id}>
-          {roles.map((r) => (
-            <option key={r.id} value={r.id}>
-              {r.label}
-            </option>
-          ))}
-        </Select>
-      </Field>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <Field label="Name">
+          <Input name="name" required />
+        </Field>
+        <Field label="Email">
+          <Input name="email" type="email" required />
+        </Field>
+        <Field label="Temporary password">
+          <Input name="password" type="password" required minLength={8} />
+        </Field>
+        <Field label="Role">
+          <Select name="roleId" required defaultValue={roles[0]?.id}>
+            {roles.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.label}
+              </option>
+            ))}
+          </Select>
+        </Field>
+      </div>
       {state.error ? (
         <p className="text-sm text-danger">{state.error}</p>
       ) : null}
       {state.ok ? (
         <p className="text-sm text-positive">{state.ok}</p>
       ) : null}
-      <Button type="submit" disabled={pending} className="w-full">
+      <Button type="submit" disabled={pending}>
         {pending ? "Creating…" : "Create user"}
       </Button>
     </form>
@@ -199,14 +208,14 @@ function UserCard({
   const overrides = new Set(user.sectionGrants.map((g) => g.section));
 
   return (
-    <div className="card border border-line p-4">
+    <div className="card min-w-0 border border-line p-4">
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-start justify-between gap-3 text-left"
+        className="flex w-full min-w-0 items-start justify-between gap-3 text-left"
       >
-        <div>
-          <p className="text-sm font-medium">
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">
             {user.name}
             {!user.active ? (
               <span className="ml-2 text-xs font-normal text-ink-faint">
@@ -214,9 +223,9 @@ function UserCard({
               </span>
             ) : null}
           </p>
-          <p className="text-xs text-ink-soft">{user.email}</p>
+          <p className="truncate text-xs text-ink-soft">{user.email}</p>
         </div>
-        <span className="rounded-md bg-canvas px-2 py-0.5 text-xs text-ink-soft">
+        <span className="shrink-0 rounded-md bg-canvas px-2 py-0.5 text-xs text-ink-soft">
           {user.role.label}
         </span>
       </button>
@@ -252,7 +261,7 @@ function UserCard({
             <p className="mb-2 text-xs font-medium text-ink-soft">
               Extra section access (overrides)
             </p>
-            <div className="grid grid-cols-2 gap-1.5">
+            <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 lg:grid-cols-4">
               {APP_SECTIONS.map((section) => (
                 <label
                   key={section}
@@ -293,10 +302,10 @@ function RoleCard({ role }: { role: RoleRow }) {
   const locked = role.key === "admin";
 
   return (
-    <form action={action} className="card space-y-3 border border-line p-4">
+    <form action={action} className="card min-w-0 space-y-3 border border-line p-4">
       <input type="hidden" name="roleId" value={role.id} />
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <div className="flex min-w-0 items-start justify-between gap-3">
+        <div className="min-w-0">
           <h3 className="text-sm font-semibold">{role.label}</h3>
           <p className="text-xs text-ink-soft">
             {role.description ?? role.key} · {role._count.users} user
@@ -304,10 +313,10 @@ function RoleCard({ role }: { role: RoleRow }) {
           </p>
         </div>
         {locked ? (
-          <span className="text-[11px] text-ink-faint">Always all sections</span>
+          <span className="shrink-0 text-[11px] text-ink-faint">Always all sections</span>
         ) : null}
       </div>
-      <div className="grid gap-1.5 sm:grid-cols-2">
+      <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
         {APP_SECTIONS.map((section: AppSection) => (
           <label
             key={section}

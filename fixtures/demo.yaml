@@ -1,6 +1,6 @@
 openapi: 3.0.3
 info:
-  title: AdLogic API
+  title: Sample API
   version: "2.4"
   description: >-
     Affiliate campaign management and reporting. Every call is authenticated
@@ -11,7 +11,7 @@ info:
 servers:
   - url: http://localhost:3000/api/demo
     description: Local demo data bundled with seeIt
-  - url: https://api.adlogic.example.com
+  - url: https://api.sample.example.com
     description: Production
 
 tags:

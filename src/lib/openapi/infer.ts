@@ -358,7 +358,7 @@ export function mapKeyFieldName(
     if (keys.length > 0 && keys.every(looksLikeDateKey)) return "date";
   }
 
-  // AdLogic report envelopes use `stats` as a date → rows map.
+  // Sample report envelopes use `stats` as a date → rows map.
   if (propertyKey === "stats") return "date";
   return "key";
 }
@@ -382,7 +382,7 @@ function syntheticKeyField(keyField: string): FieldDescriptor {
 /**
  * Decides whether a response is a list and, if so, where the list lives.
  *
- * Handles the patterns in the AdLogic spec:
+ * Handles the patterns in the sample spec:
  *   - a bare array at the root                       -> rowsPath ""
  *   - `{ fromDate, toDate, timezone, stats: [...] }` -> rowsPath "stats"
  *   - `{ …, stats: { "2025-01-01": [ … ] } }`        -> rowsPath "stats" (keyed map)

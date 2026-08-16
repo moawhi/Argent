@@ -298,7 +298,7 @@ export function ConnectionSettings({
           <div>
             <CardTitle>Settings</CardTitle>
             <p className="text-xs text-ink-soft">
-              Where seeIt sends requests, and what it is allowed to do.
+              Where Argent sends requests, and what it is allowed to do.
             </p>
           </div>
         </CardHeader>
@@ -350,7 +350,7 @@ export function ConnectionSettings({
                 )}
               </span>
               <span className="block text-xs text-ink-soft">
-                While this is off, seeIt refuses anything other than reads, so
+                While this is off, Argent refuses anything other than reads, so
                 forms and delete buttons cannot touch real records.
               </span>
             </span>
@@ -363,7 +363,7 @@ export function ConnectionSettings({
           <div>
             <CardTitle>Authentication</CardTitle>
             <p className="text-xs text-ink-soft">
-              Applied to every request seeIt sends for this connection —
+              Applied to every request Argent sends for this connection —
               explorer, objects, dashboards, and the request builder (when set
               to inherit).
             </p>
@@ -446,7 +446,7 @@ export function ConnectionSettings({
               </p>
               {credentialFields.length === 0 ? (
                 <p className="rounded-lg bg-canvas px-3 py-2 text-[11px] text-ink-faint">
-                  seeIt did not detect shared login parameters in this spec. Set
+                  Argent did not detect shared login parameters in this spec. Set
                   the parameter name to match your API (often{" "}
                   <code className="font-mono">apikey</code> or{" "}
                   <code className="font-mono">api_key</code>).
@@ -564,7 +564,7 @@ export function ConnectionSettings({
           <div>
             <CardTitle>Headers</CardTitle>
             <p className="text-xs text-ink-soft">
-              Added to every request seeIt sends to this connection — from
+              Added to every request Argent sends to this connection — from
               objects, the explorer and the request builder alike.
             </p>
           </div>

@@ -2,7 +2,7 @@ import { PageBody, PageHeader } from "@/components/layout/PageHeader";
 import { ImportWizard } from "@/components/connections/ImportWizard";
 import { requireSection } from "@/server/auth/permissions";
 
-export const metadata = { title: "Connect an API — seeIt" };
+export const metadata = { title: "Connect an API — Argent" };
 
 export default async function NewApiConnectionPage() {
   await requireSection("connections");
@@ -10,7 +10,7 @@ export default async function NewApiConnectionPage() {
     <>
       <PageHeader
         title="Connect an API"
-        description="Point seeIt at an API description file and it will do the rest."
+        description="Point Argent at an API description file and it will do the rest."
         crumbs={[
           { label: "Connections", href: "/connections" },
           { label: "Add", href: "/connections/new" },

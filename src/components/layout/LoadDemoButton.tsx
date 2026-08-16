@@ -7,7 +7,7 @@ import { loadDemoAction } from "@/app/demo/actions";
 import { Button } from "@/components/ui/button";
 
 /**
- * Installs the bundled AdLogic example — spec, credentials, objects and a
+ * Installs the bundled sample — spec, credentials, objects and a
  * dashboard — and drops the user straight onto the finished dashboard.
  */
 export function LoadDemoButton({

@@ -8,17 +8,16 @@ import {
   getConnection,
 } from "@/server/connections/service";
 import { getDbCatalog, listSqlOperations } from "@/server/database/service";
-import { DEMO_CONNECTION_NAME } from "@/server/demo/seed";
+import { isDemoConnectionName } from "@/server/demo/access";
 import { PageBody, PageHeader } from "@/components/layout/PageHeader";
 import { Button } from "@/components/ui/button";
 import { ConnectionSettings } from "@/components/connections/ConnectionSettings";
 import { DatabaseConnectionPanel } from "@/components/connections/DatabaseConnectionPanel";
-import { McpServerPanel } from "@/components/connections/McpServerPanel";
+import { McpUseInCard } from "@/components/mcp/McpUseInCard";
 import { RequestLogTable } from "@/components/connections/RequestLogTable";
 import { Card, CardBody, CardHeader, CardTitle } from "@/components/ui/primitives";
 import type { DbConfig } from "@/server/database/types";
 import { isAdmin, requireSection } from "@/server/auth/permissions";
-import { getMcpServerForConnection } from "@/server/mcp/service";
 
 export const dynamic = "force-dynamic";
 
@@ -113,7 +112,7 @@ export default async function ConnectionDetailPage({
               <div>
                 <CardTitle>Recent activity</CardTitle>
                 <p className="text-xs text-ink-soft">
-                  The last 25 queries seeIt ran against this database.
+                  The last 25 queries Argent ran against this database.
                 </p>
               </div>
             </CardHeader>
@@ -139,7 +138,7 @@ export default async function ConnectionDetailPage({
     );
   }
 
-  const [candidates, headers, logs, mcpServer, operations] = await Promise.all([
+  const [candidates, headers, logs] = await Promise.all([
     credentialCandidatesFor(id),
     connectionHeaders(id),
     prisma.requestLog.findMany({
@@ -147,19 +146,6 @@ export default async function ConnectionDetailPage({
       orderBy: { createdAt: "desc" },
       take: 25,
       include: { operation: { select: { summary: true, path: true } } },
-    }),
-    getMcpServerForConnection(id),
-    prisma.operation.findMany({
-      where: { connectionId: id, source: { not: "sql" } },
-      orderBy: [{ sortOrder: "asc" }, { path: "asc" }],
-      select: {
-        id: true,
-        operationKey: true,
-        method: true,
-        path: true,
-        summary: true,
-        tags: true,
-      },
     }),
   ]);
 
@@ -223,30 +209,16 @@ export default async function ConnectionDetailPage({
             authKind: connection.authProfile?.kind ?? "none",
             hasBearerToken: savedKeys.has("token"),
             hasBasicUser: savedKeys.has("username"),
-            isDemo: connection.name === DEMO_CONNECTION_NAME,
+            isDemo: isDemoConnectionName(connection.name),
           }}
           credentialFields={credentialFields}
           headers={headers}
           canRemoveDemo={isAdmin(user)}
         />
 
-        <McpServerPanel
+        <McpUseInCard
           connectionId={connection.id}
           connectionName={connection.name}
-          enabled={mcpServer?.enabled ?? false}
-          selectedOperationIds={
-            mcpServer?.tools.map((tool) => tool.operationId) ?? []
-          }
-          operations={operations}
-          tokens={
-            mcpServer?.tokens.map((token) => ({
-              id: token.id,
-              name: token.name,
-              tokenPrefix: token.tokenPrefix,
-              createdAt: token.createdAt.toISOString(),
-              lastUsedAt: token.lastUsedAt?.toISOString() ?? null,
-            })) ?? []
-          }
         />
 
         <Card>
@@ -254,7 +226,7 @@ export default async function ConnectionDetailPage({
             <div>
               <CardTitle>Recent activity</CardTitle>
               <p className="text-xs text-ink-soft">
-                The last 25 requests seeIt made to this API.
+                The last 25 requests Argent made to this API.
               </p>
             </div>
           </CardHeader>

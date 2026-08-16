@@ -20,7 +20,7 @@ export async function executeGateway(
       contentType: null,
       error: {
         kind: "network",
-        message: "seeIt could not reach its own server. Is the app still running?",
+        message: "Argent could not reach its own server. Is the app still running?",
         detail: `The gateway responded with HTTP ${response.status}.`,
       },
     };

@@ -38,7 +38,7 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
 }
 
 /**
- * Parses a raw response body. Several AdLogic endpoints answer with CSV under
+ * Parses a raw response body. Several sample endpoints answer with CSV under
  * `text/plain` when `format=csv`, so content type alone is not enough; we sniff
  * the body when the declared type is ambiguous.
  */

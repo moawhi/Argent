@@ -11,8 +11,8 @@ import {
 } from "@/server/demo/data";
 
 /**
- * A local stand-in for the AdLogic API. The bundled demo connection points
- * here, so seeIt can be explored end to end with no external service.
+ * A local stand-in for the sample API. The bundled demo connection points
+ * here, so Argent can be explored end to end with no external service.
  */
 
 export const dynamic = "force-dynamic";

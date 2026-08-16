@@ -188,7 +188,7 @@ function RowActionModalBody({
   const failure = isDetails
     ? details.isError
       ? {
-          message: "seeIt could not load this record.",
+          message: "Argent could not load this record.",
           detail: (details.error as Error)?.message,
         }
       : result && !result.ok
@@ -285,7 +285,7 @@ function RowActionModalBody({
         {!confirmed && !result ? (
           <Notice tone={action.danger ? "danger" : "warning"}>
             {action.confirmText ??
-              `${action.label} ${subject}? seeIt cannot undo this afterwards.`}
+              `${action.label} ${subject}? Argent cannot undo this afterwards.`}
           </Notice>
         ) : null}
 

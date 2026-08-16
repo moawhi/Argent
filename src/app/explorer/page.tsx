@@ -37,7 +37,7 @@ export default async function ExplorerIndexPage() {
     <>
       <PageHeader
         title="API Explorer"
-        description="Browse every endpoint seeIt knows about, and try any of them safely."
+        description="Browse every endpoint Argent knows about, and try any of them safely."
       />
       <PageBody>
         {connections.length === 0 ? (

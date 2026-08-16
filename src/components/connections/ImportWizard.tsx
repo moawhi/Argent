@@ -428,7 +428,7 @@ function ReviewStep({
         <div className="space-y-4">
           <Field
             label="What should we call this connection?"
-            hint="Only used inside seeIt, so pick whatever is easiest to recognise."
+            hint="Only used inside Argent, so pick whatever is easiest to recognise."
           >
             <Input value={name} onChange={(event) => setName(event.target.value)} />
           </Field>
@@ -524,7 +524,7 @@ function CredentialsStep({
           <KeyRound className="mt-0.5 size-5 shrink-0 text-brand-ink" />
           <div>
             <p className="text-sm font-medium text-ink">
-              How should seeIt authenticate?
+              How should Argent authenticate?
             </p>
             <p className="text-xs text-ink-soft">
               Enter credentials once here. They are encrypted and added to every
@@ -551,7 +551,7 @@ function CredentialsStep({
           <div className="space-y-3">
             <p className="text-xs text-ink-soft">
               Added to every request. Rename the parameter if your API uses
-              something other than what seeIt detected — for example{" "}
+              something other than what Argent detected — for example{" "}
               <code className="font-mono text-[11px]">apikey</code> on{" "}
               <code className="font-mono text-[11px]">
                 /campaigns?apikey=…
@@ -682,7 +682,7 @@ function CredentialsStep({
               Allow this connection to change data
             </span>
             <span className="block text-xs text-ink-soft">
-              Leave this off to start. While it is off, seeIt will only ever read
+              Leave this off to start. While it is off, Argent will only ever read
               from this API, so nothing can be created, edited or deleted by
               accident.
             </span>

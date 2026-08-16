@@ -1,7 +1,7 @@
 import "server-only";
 
 /**
- * A self-contained stand-in for the AdLogic API, so the bundled demo works
+ * A self-contained stand-in for the sample API, so the bundled demo works
  * without any external service or network access. Everything is generated from
  * a fixed seed, so figures are stable between reloads; writes are held in
  * memory and reset when the server restarts.
@@ -197,7 +197,7 @@ function buildCampaignGroups(): CampaignGroup[] {
       campaignCount: 5,
       monthlyBudget: budget,
       totalSpend: round(budget * between(`${key}:spend`, 0.3, 0.95)),
-      ownerEmail: `${name.split(" ")[0].toLowerCase()}@adlogic.example.com`,
+      ownerEmail: `${name.split(" ")[0].toLowerCase()}@sample.example.com`,
       createdAt: isoDaysAgo(Math.floor(between(`${key}:created`, 60, 500))),
     };
   });
@@ -250,12 +250,12 @@ interface DemoStore {
   nextId: number;
 }
 
-const globalStore = globalThis as unknown as { __seeitDemo?: DemoStore };
+const globalStore = globalThis as unknown as { __argentDemo?: DemoStore };
 
 export function store(): DemoStore {
-  if (!globalStore.__seeitDemo) {
+  if (!globalStore.__argentDemo) {
     const accounts = buildAccounts();
-    globalStore.__seeitDemo = {
+    globalStore.__argentDemo = {
       accountGroups: buildAccountGroups(),
       accounts,
       campaignGroups: buildCampaignGroups(),
@@ -263,7 +263,7 @@ export function store(): DemoStore {
       nextId: 9000,
     };
   }
-  return globalStore.__seeitDemo;
+  return globalStore.__argentDemo;
 }
 
 export function nextId(): number {

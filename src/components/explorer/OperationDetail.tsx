@@ -127,7 +127,7 @@ export function OperationDetail({
 
       {doc.credentialParams.length > 0 ? (
         <p className="rounded-lg border border-line bg-surface p-3 text-xs text-ink-soft">
-          seeIt adds{" "}
+          Argent adds{" "}
           {doc.credentialParams.map((param, index) => (
             <span key={param.name}>
               {index > 0 ? " and " : ""}

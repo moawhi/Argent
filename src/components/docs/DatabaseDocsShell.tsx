@@ -311,7 +311,7 @@ function Overview({
           <div>
             <CardTitle>Before you start</CardTitle>
             <p className="text-xs text-ink-soft">
-              How seeIt talks to {connectionName}.
+              How Argent talks to {connectionName}.
             </p>
           </div>
         </CardHeader>
@@ -413,7 +413,7 @@ function RelationsMap({
       <Card>
         <CardBody className="py-8 text-center text-sm text-ink-soft">
           No table relations mapped yet. Refresh the schema after connecting, or
-          add foreign keys / `*_id` columns so seeIt can infer links.
+          add foreign keys / `*_id` columns so Argent can infer links.
         </CardBody>
       </Card>
     );

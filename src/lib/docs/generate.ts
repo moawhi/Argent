@@ -39,7 +39,7 @@ export interface OperationDoc {
   pathParams: ParameterDescriptor[];
   queryParams: ParameterDescriptor[];
   headerParams: ParameterDescriptor[];
-  /** Parameters seeIt fills in automatically from saved credentials. */
+  /** Parameters Argent fills in automatically from saved credentials. */
   credentialParams: ParameterDescriptor[];
   requestFields: FieldDescriptor[];
   requestExample: string | null;

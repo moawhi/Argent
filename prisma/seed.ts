@@ -1,5 +1,5 @@
 /**
- * Seeds roles/grants and the bundled AdLogic demo: `npm run db:seed`.
+ * Seeds roles/grants and the bundled sample API: `npm run db:seed`.
  *
  * Safe to run more than once — demo seed does nothing if already installed.
  */

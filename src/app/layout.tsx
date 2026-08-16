@@ -11,6 +11,7 @@ import {
 import { APP_SECTIONS } from "@/lib/auth/sections";
 import { saveThemeAction } from "@/app/login/actions";
 import { resolveTheme } from "@/lib/theme";
+import { APP_DESCRIPTION, APP_NAME, APP_TAGLINE } from "@/lib/brand";
 
 const landingDisplay = Syne({
   subsets: ["latin"],
@@ -25,10 +26,9 @@ const landingBody = Figtree({
 });
 
 export const metadata: Metadata = {
-  title: "seeIt — build dashboards from any API",
-  description:
-    "Import an OpenAPI spec and turn its endpoints into tables, charts, cards and forms without writing code.",
-  applicationName: "seeIt",
+  title: `${APP_NAME} — ${APP_TAGLINE}`,
+  description: APP_DESCRIPTION,
+  applicationName: APP_NAME,
   icons: {
     icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
     apple: [{ url: "/icon.svg", type: "image/svg+xml" }],
@@ -53,7 +53,10 @@ export default async function RootLayout({
       className={`${landingDisplay.variable} ${landingBody.variable}`}
       suppressHydrationWarning
     >
-      <body className="antialiased">
+      <body
+        className="antialiased font-[family-name:var(--font-landing-body)]"
+        suppressHydrationWarning
+      >
         <Providers
           initialTheme={themePref}
           persistTheme={user ? saveThemeAction : undefined}

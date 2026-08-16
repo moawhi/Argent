@@ -489,7 +489,7 @@ export async function testConnection(connectionId: string): Promise<TestResult> 
     return {
       ok: false,
       message:
-        "seeIt could not find an endpoint it can call without extra information.",
+        "Argent could not find an endpoint it can call without extra information.",
       detail:
         "Every GET endpoint in this API needs at least one value you have not " +
         "supplied yet. You can still build objects and fill those in per object.",

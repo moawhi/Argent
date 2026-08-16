@@ -4,7 +4,7 @@ import { PageBody, PageHeader } from "@/components/layout/PageHeader";
 import { Card } from "@/components/ui/primitives";
 import { requireSection } from "@/server/auth/permissions";
 
-export const metadata = { title: "Add a connection — seeIt" };
+export const metadata = { title: "Add a connection — Argent" };
 
 export default async function NewConnectionChooserPage() {
   await requireSection("connections");
@@ -29,7 +29,7 @@ export default async function NewConnectionChooserPage() {
                 Connect an API
               </h2>
               <p className="mt-1 text-xs leading-relaxed text-ink-soft">
-                Import an OpenAPI or Swagger file. seeIt lists every endpoint and
+                Import an OpenAPI or Swagger file. Argent lists every endpoint and
                 turns them into tables, charts and forms.
               </p>
             </Card>

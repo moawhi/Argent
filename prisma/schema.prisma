@@ -52,7 +52,6 @@ model Connection {
   requestLogs   RequestLog[]
   docPages      DocPage[]
   apiGrants     ApiGrant[]
-  mcpServer     McpServer?
 }
 
 /// How credentials are attached to every outgoing request for a connection.
@@ -348,7 +347,7 @@ model Role {
   apiGrants        ApiGrant[]
 }
 
-/// Signed-in seeIt user (email + password).
+/// Signed-in Argent user (email + password).
 model User {
   id           String  @id @default(cuid())
   email        String  @unique
@@ -453,24 +452,26 @@ model SectionGrant {
   @@index([userId])
 }
 
-/// Hosted MCP server for one API connection. Tools are selected operations;
-/// clients authenticate with McpAccessToken bearer secrets.
+/// Hosted MCP server: a named tool pack that can include operations from
+/// one or many API connections. Clients authenticate with McpAccessToken.
 model McpServer {
-  id           String  @id @default(cuid())
-  connectionId String  @unique
-  enabled      Boolean @default(false)
-  createdById  String
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  enabled     Boolean @default(true)
+  /// Seeded sample MCP (slug `sample`).
+  isSample    Boolean @default(false)
+  createdById String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  connection Connection       @relation(fields: [connectionId], references: [id], onDelete: Cascade)
-  createdBy  User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
-  tools      McpServerTool[]
-  tokens     McpAccessToken[]
+  createdBy User             @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  tools     McpServerTool[]
+  tokens    McpAccessToken[]
 }
 
-/// An Operation exposed as an MCP tool on a connection's MCP server.
+/// An Operation exposed as an MCP tool. The operation's connection is the API set.
 model McpServerTool {
   id          String @id @default(cuid())
   mcpServerId String

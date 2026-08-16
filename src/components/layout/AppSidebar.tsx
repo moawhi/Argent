@@ -6,6 +6,7 @@ import { useState } from "react";
 import {
   BookOpen,
   Boxes,
+  Cable,
   LayoutDashboard,
   LogOut,
   Palette,
@@ -17,7 +18,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { SECTION_META, type AppSection } from "@/lib/auth/sections";
-import { SeeItLogo } from "@/components/brand/SeeItLogo";
+import { ArgentLogo } from "@/components/brand/ArgentLogo";
 import { ThemePicker } from "@/components/theme/ThemePicker";
 import { logoutAction } from "@/app/login/actions";
 import type { ThemeId } from "@/lib/theme";
@@ -32,15 +33,30 @@ const ICONS = {
   users: Users,
 } as const;
 
-const NAV_ORDER: AppSection[] = [
-  "dashboards",
-  "objects",
-  "explorer",
-  "requests",
-  "connections",
-  "docs",
-  "users",
+/** Work → data sources → agents → explore → docs → admin. */
+type NavItem =
+  | { kind: "section"; section: AppSection }
+  | { kind: "mcp" };
+
+const NAV_ITEMS: NavItem[] = [
+  { kind: "section", section: "dashboards" },
+  { kind: "section", section: "objects" },
+  { kind: "section", section: "connections" },
+  { kind: "mcp" },
+  { kind: "section", section: "explorer" },
+  { kind: "section", section: "requests" },
+  { kind: "section", section: "docs" },
+  { kind: "section", section: "users" },
 ];
+
+function navLinkClass(active: boolean) {
+  return cn(
+    "group flex items-center gap-2.5 rounded-xl px-2.5 py-2 text-sm transition-colors",
+    active
+      ? "bg-brand-soft font-medium text-brand-ink"
+      : "text-ink-soft hover:bg-canvas hover:text-ink",
+  );
+}
 
 export function AppSidebar({
   user,
@@ -64,7 +80,7 @@ export function AppSidebar({
     <aside className="flex h-full w-60 shrink-0 flex-col border-r border-line bg-surface">
       <div className="flex h-14 items-center gap-2 border-b border-line px-3">
         <Link href="/" className="flex min-w-0 flex-1 items-center px-1">
-          <SeeItLogo size="sm" variant="pastel" className="min-w-0" />
+          <ArgentLogo size="sm" variant="pastel" className="min-w-0" />
         </Link>
         {onClose ? (
           <button
@@ -80,7 +96,26 @@ export function AppSidebar({
       </div>
 
       <nav className="flex-1 space-y-0.5 p-2">
-        {NAV_ORDER.filter((section) => allowed.has(section)).map((section) => {
+        {NAV_ITEMS.map((item) => {
+          if (item.kind === "mcp") {
+            if (!allowed.has("connections")) return null;
+            const active =
+              pathname === "/mcp" || pathname.startsWith("/mcp/");
+            return (
+              <Link
+                key="mcp"
+                href="/mcp"
+                title="Hosted MCP tool packs for AI clients"
+                className={navLinkClass(active)}
+              >
+                <Cable className="size-4 shrink-0" />
+                MCP
+              </Link>
+            );
+          }
+
+          const { section } = item;
+          if (!allowed.has(section)) return null;
           const meta = SECTION_META[section];
           const active =
             pathname === meta.href || pathname.startsWith(`${meta.href}/`);
@@ -90,12 +125,7 @@ export function AppSidebar({
               key={section}
               href={meta.href}
               title={meta.hint}
-              className={cn(
-                "group flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
-                active
-                  ? "bg-brand-soft font-medium text-brand-ink"
-                  : "text-ink-soft hover:bg-canvas hover:text-ink",
-              )}
+              className={navLinkClass(active)}
             >
               <Icon className="size-4 shrink-0" />
               {meta.label}

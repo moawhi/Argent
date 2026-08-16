@@ -1,9 +1,13 @@
 "use client";
 
 import { useActionState, useEffect, useState, useTransition } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   Boxes,
+  Cable,
   Check,
+  Copy,
   LayoutDashboard,
   Plug,
   ShieldCheck,
@@ -15,10 +19,12 @@ import {
   onboardingSaveThemeAction,
   type AuthFormState,
 } from "@/app/login/actions";
-import { SeeItLogo } from "@/components/brand/SeeItLogo";
+import { ArgentLogo } from "@/components/brand/ArgentLogo";
+import { mcpClientKey } from "@/lib/brand";
 import { useTheme } from "@/components/theme/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import { Field, Input } from "@/components/ui/primitives";
+import { SampleMcpUsage } from "@/components/mcp/SampleMcpUsage";
 import { THEME_OPTIONS, type ThemeId } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 
@@ -29,6 +35,11 @@ const PRODUCT_STEPS = [
     icon: Plug,
     title: "Connect an API or database",
     body: "Import OpenAPI, or connect Postgres, MariaDB or ClickHouse. Credentials stay encrypted on the server.",
+  },
+  {
+    icon: Cable,
+    title: "Hosted MCP from your APIs",
+    body: "Turn endpoints into tools for Cursor and Claude. One MCP server can mix tools from multiple API sets.",
   },
   {
     icon: Boxes,
@@ -43,11 +54,19 @@ const PRODUCT_STEPS = [
   {
     icon: ShieldCheck,
     title: "Keys never reach the browser",
-    body: "Every upstream call goes through seeIt's gateway — CORS and secrets stay off your clients.",
+    body: "Every upstream call goes through Argent's gateway — CORS and secrets stay off your clients.",
   },
 ];
 
-type StepId = "profile" | "password" | "theme" | "product" | "finish";
+type StepId = "profile" | "password" | "theme" | "product" | "finish" | "mcp";
+
+type McpConnectInfo = {
+  serverId: string;
+  slug: string;
+  name: string;
+  rawToken: string;
+  dashboardSlug: string;
+};
 
 export function OnboardingWizard({
   name,
@@ -66,6 +85,7 @@ export function OnboardingWizard({
   );
   const [productIndex, setProductIndex] = useState(0);
   const [passwordDone, setPasswordDone] = useState(!mustChangePassword);
+  const [mcpInfo, setMcpInfo] = useState<McpConnectInfo | null>(null);
 
   const steps: { id: StepId; label: string }[] = [
     { id: "profile", label: "Profile" },
@@ -75,6 +95,7 @@ export function OnboardingWizard({
     { id: "theme", label: "Look" },
     { id: "product", label: "Tour" },
     { id: "finish", label: "Done" },
+    ...(mcpInfo ? [{ id: "mcp" as const, label: "MCP" }] : []),
   ];
 
   const visibleSteps = mustChangePassword
@@ -84,7 +105,7 @@ export function OnboardingWizard({
   return (
     <div className="landing mx-auto flex min-h-screen max-w-lg flex-col justify-center px-4 py-10">
       <div className="mb-8 flex flex-col items-center text-center">
-        <SeeItLogo size="lg" variant="pastel" />
+        <ArgentLogo size="lg" variant="pastel" />
         <p className="mt-2 text-sm text-ink-soft">Welcome, {name.split(" ")[0]}</p>
       </div>
 
@@ -153,7 +174,17 @@ export function OnboardingWizard({
           />
         ) : null}
 
-        {step === "finish" ? <FinishStep onBack={() => setStep("product")} /> : null}
+        {step === "finish" ? (
+          <FinishStep
+            onBack={() => setStep("product")}
+            onDemoReady={(info) => {
+              setMcpInfo(info);
+              setStep("mcp");
+            }}
+          />
+        ) : null}
+
+        {step === "mcp" && mcpInfo ? <McpConnectStep info={mcpInfo} /> : null}
       </div>
     </div>
   );
@@ -417,7 +448,13 @@ function ProductStep({
   );
 }
 
-function FinishStep({ onBack }: { onBack: () => void }) {
+function FinishStep({
+  onBack,
+  onDemoReady,
+}: {
+  onBack: () => void;
+  onDemoReady: (info: McpConnectInfo) => void;
+}) {
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
@@ -429,8 +466,8 @@ function FinishStep({ onBack }: { onBack: () => void }) {
       <div>
         <h2 className="text-base font-semibold">You are ready</h2>
         <p className="mt-2 text-sm leading-relaxed text-ink-soft">
-          Load the bundled example to explore a finished dashboard, or jump
-          straight into connecting your own API.
+          Load the bundled example to get a sample MCP server and dashboard, or
+          jump straight into connecting your own API.
         </p>
       </div>
 
@@ -445,7 +482,15 @@ function FinishStep({ onBack }: { onBack: () => void }) {
                 "@/app/login/actions"
               );
               const result = await onboardingCompleteAndLoadDemoAction();
-              if (result?.error) setError(result.error);
+              if (result?.error) {
+                setError(result.error);
+                return;
+              }
+              if (result.mcp) {
+                onDemoReady(result.mcp);
+                return;
+              }
+              setError("Demo installed, but the sample MCP could not be prepared.");
             });
           }}
         >
@@ -473,11 +518,117 @@ function FinishStep({ onBack }: { onBack: () => void }) {
             });
           }}
         >
-          Go to seeIt
+          Go to Argent
         </Button>
         <Button type="button" variant="ghost" onClick={onBack} disabled={pending}>
           Back
         </Button>
+      </div>
+    </div>
+  );
+}
+
+function McpConnectStep({ info }: { info: McpConnectInfo }) {
+  const router = useRouter();
+  const [copied, setCopied] = useState<"config" | "token" | null>(null);
+
+  const url =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/api/mcp/${info.slug}`
+      : `/api/mcp/${info.slug}`;
+
+  const snippet = JSON.stringify(
+    {
+      mcpServers: {
+        [mcpClientKey(info.slug)]: {
+          url,
+          headers: {
+            Authorization: `Bearer ${info.rawToken}`,
+          },
+        },
+      },
+    },
+    null,
+    2,
+  );
+
+  async function copy(kind: "config" | "token", text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(kind);
+      window.setTimeout(() => setCopied(null), 1600);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  return (
+    <div className="space-y-4">
+      <span className="flex size-10 items-center justify-center rounded-xl bg-brand-soft text-brand-ink">
+        <Cable className="size-5" />
+      </span>
+      <div>
+        <h2 className="text-base font-semibold">Connect the sample MCP</h2>
+        <p className="mt-2 text-sm leading-relaxed text-ink-soft">
+          We installed <strong>{info.name}</strong> from the sample API.
+          Copy this into Cursor or Claude — the token is shown once.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-line bg-canvas p-3">
+        <p className="text-xs text-ink-soft">Endpoint</p>
+        <code className="mt-1 block break-all font-mono text-[11px]">{url}</code>
+      </div>
+
+      <div className="rounded-xl border border-line bg-canvas p-3">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-xs text-ink-soft">Token (once)</p>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => copy("token", info.rawToken)}
+          >
+            {copied === "token" ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            Copy
+          </Button>
+        </div>
+        <code className="mt-1 block break-all font-mono text-[11px]">
+          {info.rawToken}
+        </code>
+      </div>
+
+      <div className="space-y-2">
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-sm font-medium">Client config</p>
+          <Button
+            type="button"
+            variant="secondary"
+            size="sm"
+            onClick={() => copy("config", snippet)}
+          >
+            {copied === "config" ? <Check className="size-3.5" /> : <Copy className="size-3.5" />}
+            Copy JSON
+          </Button>
+        </div>
+        <pre className="max-h-40 overflow-auto rounded-xl border border-line bg-canvas p-3 font-mono text-[11px] leading-relaxed text-ink-soft">
+          {snippet}
+        </pre>
+      </div>
+
+      <SampleMcpUsage compact />
+
+      <div className="flex flex-col gap-2">
+        <Button
+          onClick={() => router.push(`/dashboards/${info.dashboardSlug}`)}
+        >
+          Continue to dashboard
+        </Button>
+        <Link href={`/mcp/${info.serverId}`}>
+          <Button variant="secondary" className="w-full">
+            Open MCP settings
+          </Button>
+        </Link>
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, randomBytes } from "crypto";
 
-const TOKEN_PREFIX = "seeit_mcp_";
+const TOKEN_PREFIX = "argent_mcp_";
 const RAW_BYTES = 24;
 
 export function hashMcpToken(raw: string): string {

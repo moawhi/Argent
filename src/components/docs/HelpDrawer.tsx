@@ -172,7 +172,7 @@ function OperationHelpBody({ payload }: { payload: OperationHelp }) {
 
       {doc.credentialParams.length > 0 ? (
         <p className="rounded-lg bg-canvas p-3 text-xs text-ink-soft">
-          seeIt fills in{" "}
+          Argent fills in{" "}
           {doc.credentialParams.map((param, index) => (
             <span key={param.name}>
               {index > 0 ? ", " : ""}

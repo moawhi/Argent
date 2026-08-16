@@ -84,8 +84,8 @@ export function EndpointPicker({
         </h2>
         <p className="mt-0.5 text-sm text-ink-soft">
           {isDatabase
-            ? "Pick a saved SQL query and seeIt will suggest the best way to display the rows."
-            : "Pick an endpoint and seeIt will suggest the best way to display it."}
+            ? "Pick a saved SQL query and Argent will suggest the best way to display the rows."
+            : "Pick an endpoint and Argent will suggest the best way to display it."}
         </p>
       </div>
 

@@ -534,7 +534,7 @@ export async function executeOperation(
     if (declaredLength > MAX_RESPONSE_BYTES) {
       networkError = {
         kind: "upstreamError",
-        message: "That endpoint returned more data than seeIt can display.",
+        message: "That endpoint returned more data than Argent can display.",
         detail: `${Math.round(declaredLength / 1024 / 1024)} MB exceeds the 12 MB limit. Add a date range or limit parameter.`,
       };
     } else if (contentType?.includes("pdf") || contentType?.includes("octet-stream")) {
@@ -545,7 +545,7 @@ export async function executeOperation(
       if (responseText.length > MAX_RESPONSE_BYTES) {
         networkError = {
           kind: "upstreamError",
-          message: "That endpoint returned more data than seeIt can display.",
+          message: "That endpoint returned more data than Argent can display.",
           detail: "Add a date range or a limit parameter to narrow the result.",
         };
       }
@@ -563,7 +563,7 @@ export async function executeOperation(
         }
       : {
           kind: "network",
-          message: `seeIt could not reach ${url.hostname}.`,
+          message: `Argent could not reach ${url.hostname}.`,
           detail: error instanceof Error ? error.message : String(error),
         };
   }

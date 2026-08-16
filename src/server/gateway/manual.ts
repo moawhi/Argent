@@ -251,7 +251,7 @@ export async function executeManualRequest(
         kind: "blockedHost",
         message: `Requests to ${url.hostname} are not allowed.`,
         detail:
-          "Add the host to GATEWAY_ALLOWED_HOSTS to let seeIt call it.",
+          "Add the host to GATEWAY_ALLOWED_HOSTS to let Argent call it.",
       },
     };
   }
@@ -381,7 +381,7 @@ export async function executeManualRequest(
           }
         : {
             kind: "network",
-            message: `seeIt could not reach ${url.hostname}.`,
+            message: `Argent could not reach ${url.hostname}.`,
             detail: error instanceof Error ? error.message : String(error),
           },
     };

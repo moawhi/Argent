@@ -14,7 +14,7 @@ export function mailerConfigured(): boolean {
 
 function fromAddress(): string {
   return (
-    process.env.EMAIL_FROM?.trim() || "seeIt <onboarding@resend.dev>"
+    process.env.EMAIL_FROM?.trim() || "Argent <onboarding@resend.dev>"
   );
 }
 
@@ -75,10 +75,10 @@ export async function sendVerificationEmail(input: {
   const url = `${appBaseUrl()}/verify-email?token=${encodeURIComponent(input.token)}`;
   const result = await sendMail({
     to: input.to,
-    subject: "Verify your seeIt email",
-    text: `Hi ${input.name},\n\nConfirm your seeIt account by opening this link (valid for 24 hours):\n\n${url}\n\nIf you did not sign up, you can ignore this message.`,
+    subject: "Verify your Argent email",
+    text: `Hi ${input.name},\n\nConfirm your Argent account by opening this link (valid for 24 hours):\n\n${url}\n\nIf you did not sign up, you can ignore this message.`,
     html: `<p>Hi ${escapeHtml(input.name)},</p>
-<p>Confirm your seeIt account by opening this link (valid for 24 hours):</p>
+<p>Confirm your Argent account by opening this link (valid for 24 hours):</p>
 <p><a href="${url}">${url}</a></p>
 <p>If you did not sign up, you can ignore this message.</p>`,
   });
@@ -93,10 +93,10 @@ export async function sendPasswordResetEmail(input: {
   const url = `${appBaseUrl()}/reset-password?token=${encodeURIComponent(input.token)}`;
   const result = await sendMail({
     to: input.to,
-    subject: "Reset your seeIt password",
-    text: `Hi ${input.name},\n\nReset your seeIt password with this link (valid for one hour):\n\n${url}\n\nIf you did not request a reset, you can ignore this message.`,
+    subject: "Reset your Argent password",
+    text: `Hi ${input.name},\n\nReset your Argent password with this link (valid for one hour):\n\n${url}\n\nIf you did not request a reset, you can ignore this message.`,
     html: `<p>Hi ${escapeHtml(input.name)},</p>
-<p>Reset your seeIt password with this link (valid for one hour):</p>
+<p>Reset your Argent password with this link (valid for one hour):</p>
 <p><a href="${url}">${url}</a></p>
 <p>If you did not request a reset, you can ignore this message.</p>`,
   });

@@ -2,22 +2,32 @@ import "server-only";
 
 import { prisma } from "@/server/db";
 
-/** Fixed identity for the bundled AdLogic example (name match until a schema flag). */
-export const DEMO_CONNECTION_NAME = "AdLogic (demo)";
+/** Fixed identity for the bundled sample API (name match until a schema flag). */
+export const DEMO_CONNECTION_NAME = "Sample API";
+/** Previous product name; still recognized so existing installs keep working. */
+export const LEGACY_DEMO_CONNECTION_NAMES = ["AdLogic (demo)"] as const;
+export const DEMO_CONNECTION_NAMES: readonly string[] = [
+  DEMO_CONNECTION_NAME,
+  ...LEGACY_DEMO_CONNECTION_NAMES,
+];
 export const DEMO_DASHBOARD_SLUG = "campaign-performance";
 
 export function isDemoConnectionName(name: string | null | undefined): boolean {
-  return name === DEMO_CONNECTION_NAME;
+  return !!name && DEMO_CONNECTION_NAMES.includes(name);
 }
 
 export function isDemoDashboardSlug(slug: string | null | undefined): boolean {
   return slug === DEMO_DASHBOARD_SLUG;
 }
 
+export function demoConnectionNameWhere() {
+  return { name: { in: [...DEMO_CONNECTION_NAMES] } };
+}
+
 /** Lookup — demo is identified by fixed name until a schema flag exists. */
 export async function getDemoConnectionId(): Promise<string | null> {
   const demo = await prisma.connection.findFirst({
-    where: { name: DEMO_CONNECTION_NAME },
+    where: demoConnectionNameWhere(),
     select: { id: true },
   });
   return demo?.id ?? null;

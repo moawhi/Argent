@@ -1,6 +1,5 @@
 import Link from "next/link";
-import { redirect } from "next/navigation";
-import { BookOpen, Database, Plus, Route } from "lucide-react";
+import { BookOpen, Cable, Database, FileJson, Plug, Plus, Route } from "lucide-react";
 import { listConnections } from "@/server/connections/service";
 import { filterAccessibleConnections } from "@/server/auth/api-grants";
 import { PageBody, PageHeader } from "@/components/layout/PageHeader";
@@ -19,6 +18,7 @@ import { formatRelativeTime } from "@/lib/utils";
 import { isAdmin, requireSection } from "@/server/auth/permissions";
 import { isDemoConnectionName } from "@/server/demo/access";
 import { isDemoInstalled } from "@/server/demo/seed";
+import { GUIDES } from "@/lib/docs/guides";
 
 export const dynamic = "force-dynamic";
 
@@ -37,31 +37,63 @@ export default async function DocsIndexPage() {
   const connections = await filterAccessibleConnections(user, allConnections);
   const admin = isAdmin(user);
 
-  if (connections.length === 1) {
-    redirect(`/docs/${connections[0].id}`);
-  }
-
   return (
     <>
       <PageHeader
         title="Help & Docs"
-        description="Reference pages from your API specs and database catalogs — tables, relations, and saved queries."
+        description="Start with the guides, then open the reference built from each connection’s spec or catalog."
       />
-      <PageBody className="space-y-4">
+      <PageBody className="space-y-8">
+        <section className="space-y-3">
+          <div className="flex items-end justify-between">
+            <h2 className="font-[family-name:var(--font-landing-display)] text-lg font-medium tracking-tight">
+              Guides
+            </h2>
+            <Link href="/docs/guides" className="text-xs text-brand hover:underline">
+              See all
+            </Link>
+          </div>
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+            {GUIDES.map((guide) => (
+              <Link key={guide.slug} href={`/docs/guides/${guide.slug}`}>
+                <Card className="h-full p-4 transition-shadow hover:shadow-md">
+                  {guide.slug === "api" ? (
+                    <Plug className="mb-2 size-4 text-brand" />
+                  ) : guide.slug === "openapi" ? (
+                    <FileJson className="mb-2 size-4 text-brand" />
+                  ) : guide.slug === "mcp" ? (
+                    <Cable className="mb-2 size-4 text-brand" />
+                  ) : (
+                    <BookOpen className="mb-2 size-4 text-brand" />
+                  )}
+                  <p className="text-sm font-semibold">{guide.title}</p>
+                  <p className="mt-1 text-xs leading-relaxed text-ink-soft">
+                    {guide.summary}
+                  </p>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </section>
+
         {user.hideDemo && installed && !admin ? (
           <Card className="flex flex-wrap items-center justify-between gap-3 p-4">
             <p className="text-sm text-ink-soft">
-              You hid the bundled AdLogic example docs.
+              You hid the bundled sample docs.
             </p>
             <ShowDemoButton />
           </Card>
         ) : null}
 
+        <section className="space-y-3">
+          <h2 className="font-[family-name:var(--font-landing-display)] text-lg font-medium tracking-tight">
+            From your connections
+          </h2>
         {connections.length === 0 ? (
           <EmptyState
             icon={<BookOpen className="size-5" />}
-            title="Nothing to document yet"
-            description="Import an OpenAPI file or connect a database, and seeIt will build a reference from what it finds."
+            title="No connection docs yet"
+            description="Import an OpenAPI file or connect a database, and Argent will build a reference from what it finds."
             action={
               <Link href="/connections/new">
                 <Button>
@@ -143,6 +175,7 @@ export default async function DocsIndexPage() {
             })}
           </div>
         )}
+        </section>
       </PageBody>
     </>
   );

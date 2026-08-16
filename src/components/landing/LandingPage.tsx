@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
-import { SeeItLogo } from "@/components/brand/SeeItLogo";
+import { ArgentLogo } from "@/components/brand/ArgentLogo";
 import { cn } from "@/lib/utils";
 
 const VALUE_CARDS = [
@@ -67,7 +67,7 @@ export function LandingPage() {
   return (
     <div className="landing min-h-screen overflow-x-hidden bg-[var(--landing-canvas)] text-[var(--landing-ink)]">
       <header className="relative z-20 flex items-center justify-between px-6 py-5 sm:px-10">
-        <SeeItLogo href="/" size="md" variant="pastel" />
+        <ArgentLogo href="/" size="md" variant="pastel" />
         <Link
           href="/login"
           className="text-sm font-medium text-[var(--landing-ink-soft)] transition-colors hover:text-[var(--landing-ink)]"
@@ -96,14 +96,14 @@ export function LandingPage() {
             ready ? "translate-y-0 opacity-100" : "translate-y-4 opacity-0",
           )}
         >
-          <SeeItLogo size="xl" variant="pastel" className="items-end" />
+          <ArgentLogo size="xl" variant="pastel" className="items-end" />
           <h1 className="mt-5 max-w-2xl font-[family-name:var(--font-landing-display)] text-3xl font-medium leading-[1.15] tracking-tight text-[var(--landing-ink)] sm:text-5xl">
             MCP from your existing API — in minutes.
           </h1>
           <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--landing-ink-soft)] sm:text-lg">
             Import an OpenAPI spec, pick the endpoints agents may call, and get
             a hosted MCP URL for Cursor and Claude — credentials never leave
-            seeIt&apos;s gateway. Dashboards come along for free.
+            Argent&apos;s gateway. Dashboards come along for free.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -123,7 +123,7 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* Soft value cards — Aave-inspired interaction, seeIt palette */}
+      {/* Soft value cards — Aave-inspired interaction, Argent palette */}
       <section className="relative px-6 py-20 sm:px-10 sm:py-28">
         <div className="mx-auto max-w-5xl">
           <h2 className="font-[family-name:var(--font-landing-display)] text-3xl font-medium tracking-tight sm:text-4xl">
@@ -197,9 +197,9 @@ export function LandingPage() {
             Hosted MCP from any backend API.
           </h2>
           <p className="mt-3 max-w-xl text-base text-[var(--landing-ink-soft)]">
-            Skip writing a custom MCP server. seeIt turns the APIs you already
-            have into tools agents can use — safely, through your vaulted
-            gateway.
+            Skip writing a custom MCP server. Argent turns the APIs you already
+            have into tools agents can use — combine endpoints from multiple API
+            sets in one hosted URL, safely through your vaulted gateway.
           </p>
 
           <ol className="mt-12 grid gap-8 sm:grid-cols-3">
@@ -227,7 +227,7 @@ export function LandingPage() {
               Agents on your real APIs. Operators on the same data.
             </h2>
             <p className="mt-3 text-base leading-relaxed text-[var(--landing-ink-soft)]">
-              Every call goes through seeIt&apos;s gateway. Keys never reach the
+              Every call goes through Argent&apos;s gateway. Keys never reach the
               browser or the MCP client. Dashboards stay the ops surface for
               charts, tables and filters.
             </p>
@@ -236,7 +236,7 @@ export function LandingPage() {
             href="/signup"
             className="inline-flex shrink-0 items-center gap-2 rounded-xl bg-[var(--landing-accent)] px-5 py-3 text-sm font-semibold text-white transition-transform duration-200 hover:-translate-y-0.5"
           >
-            Open seeIt
+            Open Argent
             <ArrowRight className="size-4" />
           </Link>
         </div>
@@ -244,7 +244,7 @@ export function LandingPage() {
 
       <footer className="px-6 pb-10 pt-4 sm:px-10">
         <div className="mx-auto flex max-w-5xl items-center justify-between text-sm text-[var(--landing-ink-soft)]">
-          <SeeItLogo href="/" size="sm" variant="pastel" />
+          <ArgentLogo href="/" size="sm" variant="pastel" />
           <span>MCP and dashboards from any API.</span>
         </div>
       </footer>

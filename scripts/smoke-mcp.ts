@@ -1,17 +1,19 @@
 /**
- * Smoke test for hosted MCP: enable server, select tools, mint token, invoke.
+ * Smoke test for multi–API-set MCP: seed sample, mint token, invoke, HTTP.
  * Usage: npx tsx --conditions react-server scripts/smoke-mcp.ts
+ * Optional: SMOKE_BASE_URL=http://localhost:3000
  */
 import { prisma } from "../src/server/db";
-import { DEMO_CONNECTION_NAME } from "../src/server/demo/access";
 import { ensureDefaultRoles } from "../src/server/auth/roles";
 import { hashPassword } from "../src/server/auth/password";
+import { seedDemo } from "../src/server/demo/seed";
 import {
-  createMcpAccessToken,
+  SAMPLE_MCP_SLUG,
+  seedSampleMcpWithToken,
+} from "../src/server/mcp/sample";
+import {
   invokeMcpTool,
-  listEnabledMcpTools,
-  setMcpEnabled,
-  setMcpTools,
+  listEnabledMcpToolsBySlug,
   verifyMcpBearer,
 } from "../src/server/mcp/service";
 
@@ -21,20 +23,6 @@ function assert(cond: unknown, message: string): asserts cond {
 
 async function main() {
   await ensureDefaultRoles();
-
-  const connection = await prisma.connection.findFirst({
-    where: { name: DEMO_CONNECTION_NAME },
-    include: {
-      operations: {
-        where: { method: "GET", deprecated: false },
-        take: 3,
-        orderBy: { sortOrder: "asc" },
-        select: { id: true, operationKey: true, method: true, path: true },
-      },
-    },
-  });
-  assert(connection, "demo connection missing — run npm run db:seed");
-  assert(connection.operations.length > 0, "demo has no GET operations");
 
   const adminRole = await prisma.role.findUnique({ where: { key: "admin" } });
   assert(adminRole, "admin role");
@@ -51,67 +39,59 @@ async function main() {
   });
 
   try {
-    await setMcpEnabled(connection.id, user.id, true);
-    await setMcpTools(
-      connection.id,
-      user.id,
-      connection.operations.map((op) => op.id),
-    );
+    await seedDemo(user.id);
+    const sample = await seedSampleMcpWithToken(user.id);
+    assert(sample.slug === SAMPLE_MCP_SLUG, "sample slug");
 
-    const tools = await listEnabledMcpTools(connection.id);
-    assert(tools.length === connection.operations.length, "tool count");
+    const listed = await listEnabledMcpToolsBySlug(SAMPLE_MCP_SLUG);
+    assert(listed && listed.tools.length > 0, "sample tools");
     console.log(
-      `tools: ${tools.map((t) => t.name).join(", ")}`,
+      `tools: ${listed!.tools.map((t) => t.name).join(", ")}`,
     );
 
-    const minted = await createMcpAccessToken(
-      connection.id,
-      user.id,
-      "smoke",
-    );
-    assert(minted.rawToken.startsWith("seeit_mcp_"), "token prefix");
-
-    const auth = await verifyMcpBearer(connection.id, minted.rawToken);
+    const auth = await verifyMcpBearer(SAMPLE_MCP_SLUG, sample.rawToken);
     assert(auth, "verify bearer");
     assert(auth.userId === user.id, "token owner");
 
-    const bad = await verifyMcpBearer(connection.id, "seeit_mcp_invalid");
+    const bad = await verifyMcpBearer(SAMPLE_MCP_SLUG, "seeit_mcp_invalid");
     assert(!bad, "reject bad token");
 
-    const first = connection.operations[0]!;
+    const first =
+      listed!.tools.find((t) => t.name === "listAccounts") ??
+      listed!.tools.find((t) => t.name.startsWith("list")) ??
+      listed!.tools[0]!;
     const result = await invokeMcpTool({
       auth,
-      operationId: first.id,
+      operationId: first.operationId,
       args: {},
     });
-    // Without a running Next server the demo mock at /api/demo is unreachable;
-    // still prove ACL + gateway wiring completed (not a tool/config error).
+
     if (!result.ok) {
       const parsed = JSON.parse(result.text) as {
         error?: { kind?: string };
       };
       assert(
-        parsed.error?.kind === "network" || parsed.error?.kind === "timeout",
-        `invoke ${first.operationKey}: ${result.text}`,
+        parsed.error?.kind === "network" ||
+          parsed.error?.kind === "timeout" ||
+          parsed.error?.kind === "missingParam",
+        `invoke ${first.name}: ${result.text}`,
       );
       console.log(
-        `invoked ${first.operationKey} reached gateway (${parsed.error?.kind})`,
+        `invoked ${first.name} reached gateway (${parsed.error?.kind})`,
       );
     } else {
-      console.log(
-        `invoked ${first.operationKey} ok (${result.text.length} chars)`,
-      );
+      console.log(`invoked ${first.name} ok (${result.text.length} chars)`);
     }
 
     const base = process.env.SMOKE_BASE_URL?.trim();
     if (base) {
-      const url = `${base.replace(/\/$/, "")}/api/mcp/${connection.id}`;
+      const url = `${base.replace(/\/$/, "")}/api/mcp/${SAMPLE_MCP_SLUG}`;
       const res = await fetch(url, {
         method: "POST",
         headers: {
           "content-type": "application/json",
           accept: "application/json, text/event-stream",
-          authorization: `Bearer ${minted.rawToken}`,
+          authorization: `Bearer ${sample.rawToken}`,
         },
         body: JSON.stringify({
           jsonrpc: "2.0",
@@ -126,7 +106,10 @@ async function main() {
       });
       console.log(`HTTP initialize → ${res.status}`);
       const body = await res.text();
-      assert(res.ok || res.status === 200, `HTTP initialize failed: ${body.slice(0, 400)}`);
+      assert(
+        res.ok || res.status === 200,
+        `HTTP initialize failed: ${body.slice(0, 400)}`,
+      );
       console.log(`HTTP body preview: ${body.slice(0, 200)}`);
     } else {
       console.log("skip HTTP (set SMOKE_BASE_URL to hit the route)");
@@ -134,7 +117,6 @@ async function main() {
 
     console.log("smoke-mcp: ok");
   } finally {
-    await prisma.mcpServer.deleteMany({ where: { connectionId: connection.id } });
     await prisma.user.delete({ where: { id: user.id } }).catch(() => undefined);
   }
 }

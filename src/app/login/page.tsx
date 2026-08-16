@@ -25,8 +25,8 @@ export default async function LoginPage({
       title={bootstrap ? "Create your admin account" : "Sign in"}
       subtitle={
         bootstrap
-          ? "This is the first account on this seeIt instance."
-          : "Use the email and password for your seeIt account."
+          ? "This is the first account on this Argent instance."
+          : "Use the email and password for your Argent account."
       }
       footer={
         bootstrap ? null : (

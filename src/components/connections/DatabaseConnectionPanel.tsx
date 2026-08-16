@@ -164,7 +164,7 @@ export function DatabaseConnectionPanel({
           <div>
             <CardTitle>Settings</CardTitle>
             <p className="text-xs text-ink-soft">
-              Where seeIt connects, and whether it may change data.
+              Where Argent connects, and whether it may change data.
             </p>
           </div>
         </CardHeader>

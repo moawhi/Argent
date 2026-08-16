@@ -88,7 +88,7 @@ export function SavedRequestList({
         open={deleting !== null}
         destructive
         title={`Delete “${deleting?.name}”?`}
-        description="This only removes the saved request from seeIt. Nothing changes on the API."
+        description="This only removes the saved request from Argent. Nothing changes on the API."
         confirmLabel="Delete request"
         onCancel={() => setDeleting(null)}
         onConfirm={() => {

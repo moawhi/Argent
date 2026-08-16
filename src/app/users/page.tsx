@@ -6,6 +6,7 @@ import {
   listRequestActivity,
 } from "@/server/auth/api-grants";
 import { UsersAdmin } from "@/components/users/UsersAdmin";
+import { PageBody, PageHeader } from "@/components/layout/PageHeader";
 
 export default async function UsersPage() {
   await requireAdmin();
@@ -41,21 +42,21 @@ export default async function UsersPage() {
   ]);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-6 p-6">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Users</h1>
-        <p className="mt-1 text-sm text-ink-soft">
-          Manage people, roles, API access grants, and call activity.
-        </p>
-      </div>
-      <UsersAdmin
-        users={users}
-        roles={roles}
-        connections={connections}
-        grantsByRole={grantsByRole}
-        grantsByUser={grantsByUser}
-        activity={activity}
+    <>
+      <PageHeader
+        title="Users"
+        description="Manage people, roles, API access grants, and call activity."
       />
-    </div>
+      <PageBody>
+        <UsersAdmin
+          users={users}
+          roles={roles}
+          connections={connections}
+          grantsByRole={grantsByRole}
+          grantsByUser={grantsByUser}
+          activity={activity}
+        />
+      </PageBody>
+    </>
   );
 }

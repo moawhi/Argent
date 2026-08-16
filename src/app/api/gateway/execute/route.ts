@@ -130,7 +130,7 @@ export async function POST(request: Request) {
       contentType: null,
       error: {
         kind: "config",
-        message: "Something went wrong inside seeIt while sending that request.",
+        message: "Something went wrong inside Argent while sending that request.",
         detail: error instanceof Error ? error.message : String(error),
       },
     });

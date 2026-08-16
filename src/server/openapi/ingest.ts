@@ -223,7 +223,7 @@ export interface IngestOptions {
 
 /**
  * Parses an OpenAPI 3.x or Swagger 2.0 document (JSON or YAML), resolves every
- * `$ref`, and flattens it into the operation records seeIt stores.
+ * `$ref`, and flattens it into the operation records Argent stores.
  */
 export async function ingestSpec(
   raw: string,

@@ -140,7 +140,7 @@ export interface ResponseShape {
   fields: FieldDescriptor[];
   /**
    * Fields that sit beside the rows array, such as the `fromDate` / `toDate`
-   * envelope on the AdLogic report endpoints.
+   * envelope on the sample report endpoints.
    */
   envelopeFields: FieldDescriptor[];
   contentType?: string;
