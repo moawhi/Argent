@@ -4,10 +4,10 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 import {
+  AppWindow,
   BookOpen,
   Boxes,
   Cable,
-  LayoutDashboard,
   LogOut,
   Palette,
   PanelLeftClose,
@@ -24,7 +24,7 @@ import { logoutAction } from "@/app/login/actions";
 import type { ThemeId } from "@/lib/theme";
 
 const ICONS = {
-  dashboards: LayoutDashboard,
+  dashboards: AppWindow,
   objects: Boxes,
   explorer: Telescope,
   requests: Send,

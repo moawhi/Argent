@@ -2,7 +2,7 @@
 
 Import an OpenAPI (Swagger) document — or connect PostgreSQL, MariaDB or
 ClickHouse — and turn your existing backend APIs into **hosted MCP servers** for
-AI clients, plus dashboards (tables, charts, KPI cards and forms) without
+AI clients, plus sites (pages, menus, tables, charts, KPI cards and forms) without
 writing application code.
 
 Every upstream call goes through a server-side gateway, so credentials are
@@ -20,8 +20,8 @@ comes up.
 </p>
 
 <p align="center">
-  <img src="docs/screenshots/dashboard.png" alt="Campaign performance demo dashboard" width="800" />
-  <br /><em>Demo dashboard — Campaign performance</em>
+  <img src="docs/screenshots/dashboard.png" alt="Campaign performance demo site" width="800" />
+  <br /><em>Demo site — Campaign performance</em>
 </p>
 
 ## What it does
@@ -34,7 +34,7 @@ comes up.
 | **API Explorer**    | Every endpoint grouped by tag, with a "Try it" runner and per-endpoint success rate.                 |
 | **Objects**         | Turn an endpoint or SQL query into a table, chart, KPI card, form or action button, with a live preview. |
 | **Row buttons**     | Give a table a toolbar per row — view, edit, delete, or any endpoint — each opening a pop-up.        |
-| **Dashboards**      | Drag-and-resize grid, dashboard-wide filters, and row selection that feeds an edit form.             |
+| **Sites**            | Multi-page builder with menus, tabs, content blocks, templates, a drag-and-resize grid, site-wide filters, publish, and a full-screen live view. |
 | **Help & Docs**     | Guides on APIs, OpenAPI, and MCP, plus reference pages from your specs.                                |
 | **Request Builder** | A Postman-style editor for endpoints your spec does not cover. Saved requests become objects too.    |
 
@@ -72,7 +72,7 @@ the link is shown once in the UI instead.
 
 `npm run setup` seeds default roles (Admin, Dev, Sales, Client) with section
 grants, plus a demo connection from `fixtures/demo.yaml` and a sample
-dashboard. You can also install the demo from the home page with **Load the
+Campaign hub site. You can also install the demo from the home page with **Load the
 example**, and remove it again by deleting the connection.
 
 ### About the demo

@@ -47,7 +47,7 @@ export const GUIDES: Guide[] = [
               every call goes through the gateway.
             </p>
             <p>
-              You do not have to know HTTP to use dashboards. You do need an
+              You do not have to know HTTP to use sites. You do need an
               API (or a database) before Argent has anything to show or to
               offer as MCP tools.
             </p>
@@ -188,7 +188,7 @@ export const GUIDES: Guide[] = [
             <p>
               In the client, ask something the tools can answer — for example
               “list all accounts and summarise how many there are.” If the
-              model picks the wrong tool, name it in the prompt. Dashboards and
+              model picks the wrong tool, name it in the prompt. Sites and
               objects use the same connection; they are the operator view of
               the same data.
             </p>

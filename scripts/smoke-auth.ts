@@ -11,10 +11,11 @@ import {
 } from "../src/server/auth/session";
 import {
   canAccessSection,
+  canEditSites,
   canViewDashboard,
   type SessionUser,
 } from "../src/server/auth/acl";
-import { setDashboardAccess } from "../src/server/auth/users";
+import { createRole, deleteRole, setDashboardAccess } from "../src/server/auth/users";
 
 function assert(cond: unknown, message: string): asserts cond {
   if (!cond) throw new Error(message);
@@ -65,6 +66,8 @@ async function main() {
   assert(!canAccessSection(clientUser, "connections"), "client no connections");
   assert(canAccessSection(clientUser, "dashboards"), "client dashboards");
   assert(canAccessSection(clientUser, "docs"), "client docs");
+  assert(!canEditSites(clientUser), "client cannot edit sites");
+  assert(canEditSites(adminUser), "admin can edit sites");
 
   const dashboard = await prisma.dashboard.create({
     data: {
@@ -74,8 +77,18 @@ async function main() {
   });
 
   assert(
+    !(await canViewDashboard(clientUser, dashboard.id)),
+    "client no unpublished site",
+  );
+
+  await prisma.dashboard.update({
+    where: { id: dashboard.id },
+    data: { published: true },
+  });
+
+  assert(
     await canViewDashboard(clientUser, dashboard.id),
-    "open dashboard before grants",
+    "client sees published open site",
   );
 
   await setDashboardAccess(dashboard.id, {
@@ -99,6 +112,43 @@ async function main() {
   assert(
     await canViewDashboard(clientUser, dashboard.id),
     "client allowed by user grant",
+  );
+
+  const custom = await createRole({
+    label: `Finance ${stamp}`,
+    description: "Custom group",
+    sections: ["dashboards", "objects"],
+  });
+  assert(custom.key.startsWith("finance"), "custom role key");
+  const financeUser = await prisma.user.create({
+    data: {
+      email: `smoke-finance-${stamp}@example.com`,
+      name: "Smoke Finance",
+      passwordHash,
+      roleId: custom.id,
+      emailVerifiedAt: new Date(),
+    },
+  });
+  const financeSession = await loadSession(financeUser.id);
+  assert(canAccessSection(financeSession, "dashboards"), "custom dashboards");
+  assert(canAccessSection(financeSession, "objects"), "custom objects");
+  assert(!canAccessSection(financeSession, "connections"), "custom no connections");
+  assert(!canAccessSection(financeSession, "users"), "custom no users");
+  assert(canEditSites(financeSession), "objects role can edit sites");
+
+  let deleteBlocked = false;
+  try {
+    await deleteRole(custom.id);
+  } catch {
+    deleteBlocked = true;
+  }
+  assert(deleteBlocked, "cannot delete role with users");
+
+  await prisma.user.delete({ where: { id: financeUser.id } });
+  await deleteRole(custom.id);
+  assert(
+    (await prisma.role.findUnique({ where: { id: custom.id } })) === null,
+    "custom role deleted",
   );
 
   // Cleanup

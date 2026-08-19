@@ -19,6 +19,7 @@ import { FirstRunTour } from "@/components/layout/FirstRunTour";
 import { formatRelativeTime } from "@/lib/utils";
 import {
   canAccessSection,
+  canEditSites,
   filterViewableDashboards,
   isAdmin,
   type SessionUser,
@@ -30,6 +31,7 @@ import {
   ShowDemoButton,
 } from "@/components/demo/HideDemoButton";
 import { isDemoInstalled } from "@/server/demo/seed";
+import { listDashboards } from "@/server/dashboards/service";
 
 export async function AppHome({ user }: { user: SessionUser }) {
   const [rawConnections, objectCount, allDashboards, recentLogs, installed] =
@@ -44,11 +46,7 @@ export async function AppHome({ user }: { user: SessionUser }) {
         ? prisma.dataObject.count()
         : Promise.resolve(0),
       canAccessSection(user, "dashboards")
-        ? prisma.dashboard.findMany({
-            orderBy: [{ isDefault: "desc" }, { updatedAt: "desc" }],
-            take: 20,
-            include: { _count: { select: { widgets: true } } },
-          })
+        ? listDashboards()
         : Promise.resolve([]),
       canAccessSection(user, "connections")
         ? prisma.requestLog.findMany({
@@ -78,12 +76,13 @@ export async function AppHome({ user }: { user: SessionUser }) {
   const showRequests = canAccessSection(user, "requests");
   const showDocs = canAccessSection(user, "docs");
   const admin = isAdmin(user);
+  const editor = canEditSites(user);
 
   return (
     <>
       <PageHeader
         title="Welcome to Argent"
-        description="Import an OpenAPI spec, pick endpoints for agents, and get a hosted MCP URL — dashboards come along for free."
+        description="Import an OpenAPI spec, pick endpoints for agents, and get a hosted MCP URL — sites come along for free."
         actions={
           <div className="flex flex-wrap gap-2">
             {showDocs ? (
@@ -133,7 +132,7 @@ export async function AppHome({ user }: { user: SessionUser }) {
               </p>
               <p className="mt-1 max-w-xl text-xs leading-relaxed text-ink-soft">
                 Load the bundled sample: 32 endpoints, saved sign-in
-                details, nine ready-made tiles and a finished dashboard. It runs
+                details, ready-made objects and a Campaign hub site. It runs
                 against a mock API inside Argent, so nothing leaves this machine,
                 and you can delete it from the connection&apos;s settings
                 whenever you like.
@@ -163,9 +162,9 @@ export async function AppHome({ user }: { user: SessionUser }) {
         {dashboards.length > 0 ? (
           <section className="space-y-2">
             <div className="flex items-end justify-between">
-              <h2 className="text-sm font-semibold">Your dashboards</h2>
+              <h2 className="text-sm font-semibold">Your sites</h2>
               <Link
-                href="/dashboards"
+                href="/sites"
                 className="text-xs text-brand hover:underline"
               >
                 See all
@@ -180,7 +179,11 @@ export async function AppHome({ user }: { user: SessionUser }) {
                     className="h-full p-4 transition-shadow hover:shadow-md"
                   >
                     <Link
-                      href={`/dashboards/${dashboard.slug}`}
+                      href={
+                        editor
+                          ? `/sites/${dashboard.slug}`
+                          : `/view/${dashboard.slug}`
+                      }
                       className="block"
                     >
                       <LayoutDashboard className="mb-2 size-4 text-brand" />
@@ -188,6 +191,9 @@ export async function AppHome({ user }: { user: SessionUser }) {
                         {dashboard.name}
                       </p>
                       <p className="mt-0.5 text-[11px] text-ink-faint">
+                        {dashboard._count.pages} page
+                        {dashboard._count.pages === 1 ? "" : "s"}
+                        {" · "}
                         {dashboard._count.widgets} tile
                         {dashboard._count.widgets === 1 ? "" : "s"}
                       </p>

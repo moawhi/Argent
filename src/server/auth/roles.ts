@@ -3,6 +3,8 @@ import "server-only";
 import { prisma } from "@/server/db";
 import { APP_SECTIONS, type AppSection } from "@/lib/auth/sections";
 
+export { isSystemRoleKey, SYSTEM_ROLE_KEYS } from "@/lib/auth/roles";
+
 const DEFAULT_ROLES: {
   key: string;
   label: string;
@@ -30,12 +32,12 @@ const DEFAULT_ROLES: {
   {
     key: "client",
     label: "Client",
-    description: "View shared dashboards and help docs.",
+    description: "View published sites and help docs.",
     sections: ["dashboards", "docs"],
   },
 ];
 
-/** Idempotent seed of built-in roles and their default section grants. */
+/** Idempotent seed of built-in roles. Does not overwrite custom labels or section picks. */
 export async function ensureDefaultRoles() {
   for (const def of DEFAULT_ROLES) {
     const role = await prisma.role.upsert({
@@ -45,21 +47,16 @@ export async function ensureDefaultRoles() {
         label: def.label,
         description: def.description,
       },
-      update: {
-        label: def.label,
-        description: def.description,
-      },
+      update: {},
     });
 
-    const existing = await prisma.sectionGrant.findMany({
+    const existing = await prisma.sectionGrant.count({
       where: { roleId: role.id },
     });
-    const have = new Set(existing.map((g) => g.section));
-    for (const section of def.sections) {
-      if (have.has(section)) continue;
-      await prisma.sectionGrant.create({
-        data: { roleId: role.id, section },
-      });
-    }
+    if (existing > 0) continue;
+
+    await prisma.sectionGrant.createMany({
+      data: def.sections.map((section) => ({ roleId: role.id, section })),
+    });
   }
 }

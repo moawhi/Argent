@@ -16,6 +16,7 @@ import {
 function revalidateDemoPaths() {
   revalidatePath("/");
   revalidatePath("/connections");
+  revalidatePath("/sites");
   revalidatePath("/dashboards");
   revalidatePath("/docs");
   revalidatePath("/objects");

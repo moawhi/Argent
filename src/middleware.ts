@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { jwtVerify } from "jose";
 import { SESSION_COOKIE } from "@/server/auth/session-constants";
+import { SITE_PATHNAME_HEADER } from "@/lib/sites/paths";
 
 const PUBLIC_PATHS = [
   "/",
@@ -20,6 +21,12 @@ function isPublic(pathname: string): boolean {
     if (p === "/") return pathname === "/";
     return pathname === p || pathname.startsWith(`${p}/`);
   });
+}
+
+function next(request: NextRequest) {
+  const requestHeaders = new Headers(request.headers);
+  requestHeaders.set(SITE_PATHNAME_HEADER, request.nextUrl.pathname);
+  return NextResponse.next({ request: { headers: requestHeaders } });
 }
 
 function sessionSecret(): Uint8Array | null {
@@ -52,7 +59,7 @@ export async function middleware(request: NextRequest) {
     pathname.startsWith("/favicon") ||
     /\.(?:svg|png|jpg|jpeg|gif|webp|ico)$/.test(pathname)
   ) {
-    return NextResponse.next();
+    return next(request);
   }
 
   const authed = await hasValidSession(request);
@@ -65,11 +72,11 @@ export async function middleware(request: NextRequest) {
     if (authed && pathname !== "/verify-email") {
       return NextResponse.redirect(new URL("/", request.url));
     }
-    return NextResponse.next();
+    return next(request);
   }
 
   if (pathname === "/" || isPublic(pathname)) {
-    return NextResponse.next();
+    return next(request);
   }
 
   if (!authed) {
@@ -78,7 +85,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(login);
   }
 
-  return NextResponse.next();
+  return next(request);
 }
 
 export const config = {

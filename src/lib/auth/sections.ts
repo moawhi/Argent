@@ -15,9 +15,9 @@ export const SECTION_META: Record<
   { label: string; href: string; hint: string }
 > = {
   dashboards: {
-    label: "Dashboards",
-    href: "/dashboards",
-    hint: "Your pages of charts and tables",
+    label: "Sites",
+    href: "/sites",
+    hint: "Pages, menus and tabs of charts and tables",
   },
   objects: {
     label: "Objects",
@@ -58,7 +58,8 @@ export function isAppSection(value: string): value is AppSection {
 /** Path prefix → section for middleware and page gates. */
 export function sectionForPath(pathname: string): AppSection | null {
   if (pathname === "/" || pathname.startsWith("/settings")) return null;
-  if (pathname.startsWith("/dashboards")) return "dashboards";
+  if (pathname.startsWith("/dashboards") || pathname.startsWith("/sites") || pathname.startsWith("/view"))
+    return "dashboards";
   if (pathname.startsWith("/objects")) return "objects";
   if (pathname.startsWith("/explorer")) return "explorer";
   if (pathname.startsWith("/requests")) return "requests";

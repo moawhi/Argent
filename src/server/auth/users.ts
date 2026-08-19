@@ -3,6 +3,7 @@ import "server-only";
 import { prisma } from "@/server/db";
 import { hashPassword } from "@/server/auth/password";
 import { APP_SECTIONS, type AppSection } from "@/lib/auth/sections";
+import { isSystemRoleKey, slugifyRoleKey } from "@/lib/auth/roles";
 import { ensureDefaultRoles } from "@/server/auth/roles";
 
 export async function listUsers() {
@@ -73,6 +74,94 @@ export async function updateUser(
   }
 
   return prisma.user.update({ where: { id }, data: patch });
+}
+
+async function uniqueRoleKey(base: string): Promise<string> {
+  let key = base;
+  let n = 2;
+  while (await prisma.role.findUnique({ where: { key } })) {
+    key = `${base.slice(0, 36)}-${n}`;
+    n += 1;
+    if (n > 100) throw new Error("Could not allocate a unique role key.");
+  }
+  return key;
+}
+
+export async function createRole(input: {
+  label: string;
+  description?: string;
+  sections: AppSection[];
+}) {
+  const label = input.label.trim();
+  if (!label) throw new Error("Role name is required.");
+  if (label.length > 60) throw new Error("Role name must be 60 characters or fewer.");
+
+  const description = input.description?.trim() || null;
+  const key = await uniqueRoleKey(slugifyRoleKey(label));
+
+  return prisma.role.create({
+    data: {
+      key,
+      label,
+      description,
+      sectionGrants: {
+        create: input.sections.map((section) => ({ section })),
+      },
+    },
+  });
+}
+
+export async function updateRole(
+  roleId: string,
+  data: {
+    label?: string;
+    description?: string | null;
+    sections?: AppSection[];
+  },
+) {
+  const role = await prisma.role.findUniqueOrThrow({ where: { id: roleId } });
+
+  if (data.label !== undefined || data.description !== undefined) {
+    if (role.key === "admin") {
+      throw new Error("The Admin role cannot be renamed.");
+    }
+    const patch: { label?: string; description?: string | null } = {};
+    if (data.label !== undefined) {
+      const label = data.label.trim();
+      if (!label) throw new Error("Role name is required.");
+      if (label.length > 60) {
+        throw new Error("Role name must be 60 characters or fewer.");
+      }
+      patch.label = label;
+    }
+    if (data.description !== undefined) {
+      patch.description = data.description?.trim() || null;
+    }
+    await prisma.role.update({ where: { id: roleId }, data: patch });
+  }
+
+  if (data.sections !== undefined) {
+    await setRoleSections(roleId, data.sections);
+  }
+}
+
+export async function deleteRole(roleId: string) {
+  const role = await prisma.role.findUniqueOrThrow({
+    where: { id: roleId },
+    include: { _count: { select: { users: true } } },
+  });
+
+  if (isSystemRoleKey(role.key)) {
+    throw new Error("Built-in roles cannot be deleted.");
+  }
+  if (role._count.users > 0) {
+    const n = role._count.users;
+    throw new Error(
+      `Reassign ${n} user${n === 1 ? "" : "s"} before deleting this role.`,
+    );
+  }
+
+  await prisma.role.delete({ where: { id: roleId } });
 }
 
 export async function setRoleSections(roleId: string, sections: AppSection[]) {

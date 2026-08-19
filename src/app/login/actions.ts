@@ -387,6 +387,7 @@ export async function onboardingCompleteAndLoadDemoAction(): Promise<
     revalidatePath("/");
     revalidatePath("/connections");
     revalidatePath("/dashboards");
+    revalidatePath("/sites");
     revalidatePath("/objects");
     revalidatePath("/mcp");
     return {

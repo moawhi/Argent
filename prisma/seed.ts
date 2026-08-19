@@ -18,7 +18,7 @@ async function main() {
   } else {
     console.log(
       `Demo installed: ${result.operationCount} endpoints, ` +
-        `${result.objectCount} objects, dashboard /dashboards/${result.dashboardSlug}.`,
+        `${result.objectCount} objects, site /sites/${result.dashboardSlug}.`,
     );
   }
 

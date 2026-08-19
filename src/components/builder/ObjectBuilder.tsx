@@ -12,6 +12,7 @@ import {
   Save,
   SquarePen,
   Table2,
+  X,
 } from "lucide-react";
 import {
   builderContextAction,
@@ -78,6 +79,9 @@ export function ObjectBuilder({
   initialOperationId,
   initialConnectionId,
   initial,
+  variant = "page",
+  onClose,
+  onSaved,
 }: {
   connections: {
     id: string;
@@ -89,6 +93,9 @@ export function ObjectBuilder({
   initialOperationId?: string;
   initialConnectionId?: string;
   initial?: BuilderInitial;
+  variant?: "page" | "panel";
+  onClose?: () => void;
+  onSaved?: (id: string) => void;
 }) {
   const router = useRouter();
   const [saving, startSaving] = useTransition();
@@ -217,7 +224,10 @@ export function ObjectBuilder({
       }
 
       setSavedId(result.id ?? null);
-      router.push("/objects");
+      if (result.id) onSaved?.(result.id);
+      if (variant !== "panel") {
+        router.push("/objects");
+      }
     });
   }
 
@@ -250,131 +260,168 @@ export function ObjectBuilder({
     );
   }
 
+  const settingsBody = (
+    <div className="space-y-5 p-4">
+      <div className="space-y-2">
+        {variant === "panel" ? null : (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              setOperationId(null);
+              setKind(null);
+              setConfig(null);
+            }}
+          >
+            <ArrowLeft /> Choose a different endpoint
+          </Button>
+        )}
+
+        <Card className="p-3">
+          <div className="flex items-center gap-2">
+            <MethodBadge method={context.operation.method} />
+            <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-ink-soft">
+              {context.operation.path}
+            </code>
+          </div>
+          <p className="mt-1.5 text-xs text-ink">
+            {context.operation.summary ?? "No description provided."}
+          </p>
+          <button
+            onClick={() =>
+              openHelp({
+                connectionId: context.connection.id,
+                operationKey: context.operation.operationKey,
+              })
+            }
+            className="mt-1.5 text-[11px] text-brand hover:underline"
+          >
+            What does this endpoint do?
+          </button>
+        </Card>
+      </div>
+
+      <section className="space-y-2">
+        <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+          What should this look like?
+        </h3>
+        <div className="space-y-1.5">
+          {kindOptions.map((entry) => {
+            const Icon = KIND_ICON[entry.kind];
+            const active = kind === entry.kind;
+            return (
+              <button
+                key={entry.kind}
+                type="button"
+                onClick={() => chooseKind(entry.kind)}
+                className={cn(
+                  "flex w-full items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors",
+                  active
+                    ? "border-brand bg-brand-soft"
+                    : "border-line hover:bg-canvas",
+                )}
+              >
+                <span
+                  className={cn(
+                    "flex size-7 shrink-0 items-center justify-center rounded-md",
+                    active
+                      ? "bg-brand text-white"
+                      : "bg-canvas text-ink-soft",
+                  )}
+                >
+                  <Icon className="size-3.5" />
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="flex items-center gap-1.5">
+                    <span className="text-xs font-medium text-ink">
+                      {OBJECT_KIND_LABEL[entry.kind]}
+                    </span>
+                    {entry.kind === suggestedKind ? (
+                      <Badge tone="brand">Suggested</Badge>
+                    ) : null}
+                  </span>
+                  <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-soft">
+                    {entry.reason}
+                  </span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      <Field label="Name" hint="Shown as the heading on your dashboard.">
+        <Input
+          value={name}
+          onChange={(event) => setName(event.target.value)}
+          placeholder={suggestion?.name ?? "My object"}
+        />
+      </Field>
+
+      {context.bindableParams.length > 0 ? (
+        <ParamBindingPanel
+          params={context.bindableParams}
+          bindings={bindings}
+          onChange={setBindings}
+          previewParams={previewParams}
+          onPreviewParamsChange={setPreviewParams}
+        />
+      ) : null}
+
+      {kind && config ? (
+        <section className="space-y-2">
+          <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
+            {OBJECT_KIND_LABEL[kind]} settings
+          </h3>
+          <ConfigPanel
+            kind={kind}
+            config={config}
+            onChange={setConfig}
+            fields={context.responseFields}
+            operations={operationsByConnection[context.connection.id] ?? []}
+          />
+        </section>
+      ) : null}
+    </div>
+  );
+
+  if (variant === "panel") {
+    return (
+      <div className="flex h-full min-h-0 flex-col bg-surface">
+        <div className="flex shrink-0 items-center justify-between gap-2 border-b border-line px-3 py-2">
+          <p className="min-w-0 truncate text-sm font-semibold">
+            {name || "Edit object"}
+          </p>
+          <div className="flex shrink-0 items-center gap-1">
+            <Button size="sm" onClick={handleSave} disabled={saving || !kind}>
+              {saving ? <Loader2 className="animate-spin" /> : <Save />}
+              Save
+            </Button>
+            {onClose ? (
+              <Button
+                size="icon"
+                variant="ghost"
+                onClick={onClose}
+                aria-label="Close"
+              >
+                <X />
+              </Button>
+            ) : null}
+          </div>
+        </div>
+        {error ? (
+          <p className="shrink-0 px-3 pt-2 text-xs text-danger">{error}</p>
+        ) : null}
+        <div className="min-h-0 flex-1 overflow-y-auto">{settingsBody}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-0 flex-1">
       {/* ---------------- settings ---------------- */}
       <div className="w-[26rem] shrink-0 overflow-y-auto border-r border-line bg-surface">
-        <div className="space-y-5 p-4">
-          <div className="space-y-2">
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setOperationId(null);
-                setKind(null);
-                setConfig(null);
-              }}
-            >
-              <ArrowLeft /> Choose a different endpoint
-            </Button>
-
-            <Card className="p-3">
-              <div className="flex items-center gap-2">
-                <MethodBadge method={context.operation.method} />
-                <code className="min-w-0 flex-1 truncate font-mono text-[11px] text-ink-soft">
-                  {context.operation.path}
-                </code>
-              </div>
-              <p className="mt-1.5 text-xs text-ink">
-                {context.operation.summary ?? "No description provided."}
-              </p>
-              <button
-                onClick={() =>
-                  openHelp({
-                    connectionId: context.connection.id,
-                    operationKey: context.operation.operationKey,
-                  })
-                }
-                className="mt-1.5 text-[11px] text-brand hover:underline"
-              >
-                What does this endpoint do?
-              </button>
-            </Card>
-          </div>
-
-          <section className="space-y-2">
-            <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-              What should this look like?
-            </h3>
-            <div className="space-y-1.5">
-              {kindOptions.map((entry) => {
-                const Icon = KIND_ICON[entry.kind];
-                const active = kind === entry.kind;
-                return (
-                  <button
-                    key={entry.kind}
-                    onClick={() => chooseKind(entry.kind)}
-                    className={cn(
-                      "flex w-full items-start gap-2.5 rounded-lg border p-2.5 text-left transition-colors",
-                      active
-                        ? "border-brand bg-brand-soft"
-                        : "border-line hover:bg-canvas",
-                    )}
-                  >
-                    <span
-                      className={cn(
-                        "flex size-7 shrink-0 items-center justify-center rounded-md",
-                        active
-                          ? "bg-brand text-white"
-                          : "bg-canvas text-ink-soft",
-                      )}
-                    >
-                      <Icon className="size-3.5" />
-                    </span>
-                    <span className="min-w-0 flex-1">
-                      <span className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-ink">
-                          {OBJECT_KIND_LABEL[entry.kind]}
-                        </span>
-                        {entry.kind === suggestedKind ? (
-                          <Badge tone="brand">Suggested</Badge>
-                        ) : null}
-                      </span>
-                      <span className="mt-0.5 block text-[11px] leading-relaxed text-ink-soft">
-                        {entry.reason}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </section>
-
-          <Field label="Name" hint="Shown as the heading on your dashboard.">
-            <Input
-              value={name}
-              onChange={(event) => setName(event.target.value)}
-              placeholder={suggestion?.name ?? "My object"}
-            />
-          </Field>
-
-          {context.bindableParams.length > 0 ? (
-            <ParamBindingPanel
-              params={context.bindableParams}
-              bindings={bindings}
-              onChange={setBindings}
-              previewParams={previewParams}
-              onPreviewParamsChange={setPreviewParams}
-            />
-          ) : null}
-
-          {kind && config ? (
-            <section className="space-y-2">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-ink-soft">
-                {OBJECT_KIND_LABEL[kind]} settings
-              </h3>
-              <ConfigPanel
-                kind={kind}
-                config={config}
-                onChange={setConfig}
-                fields={context.responseFields}
-                operations={
-                  operationsByConnection[context.connection.id] ?? []
-                }
-              />
-            </section>
-          ) : null}
-        </div>
+        {settingsBody}
       </div>
 
       {/* ---------------- preview ---------------- */}

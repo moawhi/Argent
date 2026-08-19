@@ -42,7 +42,7 @@ export function DashboardAccess({
       });
       setMessage(
         roleIds.size === 0 && userIds.size === 0
-          ? "Open to everyone with Dashboards access."
+          ? "Open to everyone with Sites access."
           : "Viewer list updated.",
       );
       router.refresh();
@@ -54,7 +54,7 @@ export function DashboardAccess({
       <div>
         <h4 className="text-sm font-medium">Who can view</h4>
         <p className="text-xs text-ink-soft">
-          Leave empty so anyone with the Dashboards section can open it. Once
+          Leave empty so anyone with the Sites section can open it. Once
           you pick roles or people, only they (and Admins) can view.
         </p>
       </div>

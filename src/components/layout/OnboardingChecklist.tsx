@@ -43,11 +43,11 @@ export function OnboardingChecklist({
     },
     {
       done: hasDashboard,
-      title: "Arrange a dashboard",
+      title: "Arrange a site",
       description:
-        "Drop your objects onto a page, add a date filter at the top, and link a table to a form so clicking a row fills it in.",
-      href: "/dashboards",
-      cta: "Create a dashboard",
+        "Start from a template, add pages and a menu, drop objects onto tabs, and link a table to a form.",
+      href: "/sites",
+      cta: "Create a site",
     },
   ];
 
@@ -66,7 +66,7 @@ export function OnboardingChecklist({
         <X className="size-4" />
       </button>
 
-      <h2 className="text-sm font-semibold">Three steps to your first dashboard</h2>
+      <h2 className="text-sm font-semibold">Three steps to your first site</h2>
       <p className="mt-0.5 text-xs text-ink-soft">
         About five minutes. You can stop after any step and come back.
       </p>

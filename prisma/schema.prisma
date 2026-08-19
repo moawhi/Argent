@@ -170,6 +170,8 @@ model DataObject {
   @@index([connectionId, kind])
 }
 
+/// A site (user-facing). Internally still named Dashboard so existing grants,
+/// demo slugs, and ACL keep working.
 model Dashboard {
   id           String  @id @default(cuid())
   connectionId String?
@@ -178,8 +180,11 @@ model Dashboard {
   slug        String  @unique
   description String?
   isDefault   Boolean @default(false)
-  /// When false, the filter bar is hidden on the dashboard page.
+  /// When false, the filter bar is hidden on the site.
   filtersVisible Boolean @default(true)
+  /// Live fullscreen view at `/view/{slug}` is the published experience.
+  published   Boolean   @default(false)
+  publishedAt DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -188,14 +193,99 @@ model Dashboard {
   widgets    DashboardWidget[]
   filters    GlobalFilter[]
   grants     DashboardGrant[]
+  pages      Page[]
+  menus      SiteMenu[]
 }
 
-/// Placement of a DataObject on a dashboard grid (12 column layout).
+/// One page on a site. Every site has at least a Home page.
+model Page {
+  id          String @id @default(cuid())
+  dashboardId String
+
+  name        String
+  slug        String
+  sortOrder   Int     @default(0)
+  isHome      Boolean @default(false)
+  /// When false and the page has a single tab, the tab bar is hidden.
+  showTabs    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dashboard Dashboard      @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  tabs      PageTab[]
+  menuItems SiteMenuItem[]
+
+  @@unique([dashboardId, slug])
+  @@index([dashboardId])
+}
+
+/// A tab on a page. Every page has at least one tab; widgets live on tabs.
+model PageTab {
+  id        String @id @default(cuid())
+  pageId    String
+
+  name      String
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  page    Page              @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  widgets DashboardWidget[]
+
+  @@index([pageId])
+}
+
+/// Header (or future sidebar) navigation for a site.
+model SiteMenu {
+  id          String @id @default(cuid())
+  dashboardId String
+  /// header | sidebar
+  location    String @default("header")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  dashboard Dashboard      @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  items     SiteMenuItem[]
+
+  @@index([dashboardId])
+}
+
+model SiteMenuItem {
+  id       String  @id @default(cuid())
+  menuId   String
+  parentId String?
+  pageId   String?
+
+  label     String
+  sortOrder Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  menu     SiteMenu       @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  parent   SiteMenuItem?  @relation("MenuItemTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children SiteMenuItem[] @relation("MenuItemTree")
+  page     Page?          @relation(fields: [pageId], references: [id], onDelete: SetNull)
+
+  @@index([menuId])
+  @@index([parentId])
+}
+
+/// Placement of a tile on a page tab (12 column layout).
 model DashboardWidget {
   id           String  @id @default(cuid())
   dashboardId  String
-  dataObjectId String
+  tabId        String?
+  dataObjectId String?
   title        String?
+
+  /// object | heading | richtext | image
+  blockKind   String @default("object")
+  /// Content-block payload — see src/lib/sites/types.ts
+  blockConfig Json   @default("{}")
 
   x Int @default(0)
   y Int @default(0)
@@ -208,10 +298,12 @@ model DashboardWidget {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  dashboard  Dashboard  @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
-  dataObject DataObject @relation(fields: [dataObjectId], references: [id], onDelete: Cascade)
+  dashboard  Dashboard   @relation(fields: [dashboardId], references: [id], onDelete: Cascade)
+  tab        PageTab?    @relation(fields: [tabId], references: [id], onDelete: Cascade)
+  dataObject DataObject? @relation(fields: [dataObjectId], references: [id], onDelete: Cascade)
 
   @@index([dashboardId])
+  @@index([tabId])
 }
 
 /// A dashboard-wide control (date range, account picker, ...) that widget

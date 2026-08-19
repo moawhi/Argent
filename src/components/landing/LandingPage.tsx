@@ -103,7 +103,7 @@ export function LandingPage() {
           <p className="mt-5 max-w-xl text-base leading-relaxed text-[var(--landing-ink-soft)] sm:text-lg">
             Import an OpenAPI spec, pick the endpoints agents may call, and get
             a hosted MCP URL for Cursor and Claude — credentials never leave
-            Argent&apos;s gateway. Dashboards come along for free.
+            Argent&apos;s gateway. Sites come along for free.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
             <Link
@@ -228,7 +228,7 @@ export function LandingPage() {
             </h2>
             <p className="mt-3 text-base leading-relaxed text-[var(--landing-ink-soft)]">
               Every call goes through Argent&apos;s gateway. Keys never reach the
-              browser or the MCP client. Dashboards stay the ops surface for
+              browser or the MCP client. Sites stay the ops surface for
               charts, tables and filters.
             </p>
           </div>

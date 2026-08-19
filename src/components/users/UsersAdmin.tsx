@@ -2,13 +2,16 @@
 
 import { useActionState, useState } from "react";
 import {
+  createRoleAction,
   createUserAction,
-  updateRoleSectionsAction,
+  deleteRoleAction,
+  updateRoleAction,
   updateUserAction,
   type UsersFormState,
 } from "@/app/users/actions";
 import { Button } from "@/components/ui/button";
-import { Field, Input, Select } from "@/components/ui/primitives";
+import { Badge, Field, Input, Select } from "@/components/ui/primitives";
+import { isSystemRoleKey } from "@/lib/auth/roles";
 import { APP_SECTIONS, SECTION_META, type AppSection } from "@/lib/auth/sections";
 import { cn } from "@/lib/utils";
 import {
@@ -111,6 +114,7 @@ export function UsersAdmin({
 
       {tab === "roles" ? (
         <div className="w-full min-w-0 space-y-3">
+          <CreateRoleCard />
           {roles.map((role) => (
             <RoleCard key={role.id} role={role} />
           ))}
@@ -293,29 +297,16 @@ function UserCard({
   );
 }
 
-function RoleCard({ role }: { role: RoleRow }) {
-  const [state, action, pending] = useActionState(
-    updateRoleSectionsAction,
-    initial,
-  );
-  const granted = new Set(role.sectionGrants.map((g) => g.section));
-  const locked = role.key === "admin";
-
+function SectionAccessGrid({
+  granted,
+  locked,
+}: {
+  granted: Set<string>;
+  locked?: boolean;
+}) {
   return (
-    <form action={action} className="card min-w-0 space-y-3 border border-line p-4">
-      <input type="hidden" name="roleId" value={role.id} />
-      <div className="flex min-w-0 items-start justify-between gap-3">
-        <div className="min-w-0">
-          <h3 className="text-sm font-semibold">{role.label}</h3>
-          <p className="text-xs text-ink-soft">
-            {role.description ?? role.key} · {role._count.users} user
-            {role._count.users === 1 ? "" : "s"}
-          </p>
-        </div>
-        {locked ? (
-          <span className="shrink-0 text-[11px] text-ink-faint">Always all sections</span>
-        ) : null}
-      </div>
+    <div>
+      <p className="mb-2 text-xs font-medium text-ink-soft">Section access</p>
       <div className="grid grid-cols-2 gap-1.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7">
         {APP_SECTIONS.map((section: AppSection) => (
           <label
@@ -324,6 +315,7 @@ function RoleCard({ role }: { role: RoleRow }) {
               "flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm",
               locked ? "opacity-70" : "hover:bg-canvas",
             )}
+            title={SECTION_META[section].hint}
           >
             <input
               type="checkbox"
@@ -336,17 +328,138 @@ function RoleCard({ role }: { role: RoleRow }) {
           </label>
         ))}
       </div>
+    </div>
+  );
+}
+
+function CreateRoleCard() {
+  const [state, action, pending] = useActionState(createRoleAction, initial);
+
+  return (
+    <form
+      key={state.nonce ?? "new-role"}
+      action={action}
+      className="card w-full min-w-0 space-y-3 border border-line p-4"
+    >
+      <div>
+        <h2 className="text-sm font-semibold">New role</h2>
+        <p className="text-xs text-ink-soft">
+          Create a group type and choose which areas it can open. Assign people
+          on the People tab; API and site viewers are set on the other tabs.
+        </p>
+      </div>
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Name" required>
+          <Input name="label" required maxLength={60} placeholder="e.g. Finance" />
+        </Field>
+        <Field label="Description">
+          <Input name="description" maxLength={160} placeholder="Optional" />
+        </Field>
+      </div>
+      <SectionAccessGrid granted={new Set()} />
       {state.error ? (
         <p className="text-sm text-danger">{state.error}</p>
       ) : null}
       {state.ok ? (
         <p className="text-sm text-positive">{state.ok}</p>
       ) : null}
-      {!locked ? (
-        <Button type="submit" disabled={pending}>
-          {pending ? "Saving…" : "Save role access"}
-        </Button>
-      ) : null}
+      <Button type="submit" disabled={pending}>
+        {pending ? "Creating…" : "Create role"}
+      </Button>
     </form>
+  );
+}
+
+function RoleCard({ role }: { role: RoleRow }) {
+  const [state, action, pending] = useActionState(updateRoleAction, initial);
+  const [deleteState, deleteAction, deleting] = useActionState(
+    deleteRoleAction,
+    initial,
+  );
+  const granted = new Set(role.sectionGrants.map((g) => g.section));
+  const locked = role.key === "admin";
+  const system = isSystemRoleKey(role.key);
+  const canDelete = !system && role._count.users === 0;
+  const error = state.error ?? deleteState.error;
+  const ok = state.ok ?? deleteState.ok;
+
+  return (
+    <div className="card min-w-0 space-y-3 border border-line p-4">
+      <form action={action} className="space-y-3">
+        <input type="hidden" name="roleId" value={role.id} />
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0 flex-1 space-y-2">
+            {locked ? (
+              <div>
+                <h3 className="text-sm font-semibold">{role.label}</h3>
+                <p className="text-xs text-ink-soft">
+                  {role.description ?? role.key} · {role._count.users} user
+                  {role._count.users === 1 ? "" : "s"}
+                </p>
+              </div>
+            ) : (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Field label="Name" required>
+                  <Input
+                    name="label"
+                    required
+                    maxLength={60}
+                    defaultValue={role.label}
+                  />
+                </Field>
+                <Field label="Description">
+                  <Input
+                    name="description"
+                    maxLength={160}
+                    defaultValue={role.description ?? ""}
+                  />
+                </Field>
+              </div>
+            )}
+          </div>
+          <div className="flex shrink-0 flex-col items-end gap-1">
+            <Badge tone={system ? "neutral" : "brand"}>
+              {system ? "Built-in" : "Custom"}
+            </Badge>
+            {locked ? (
+              <span className="text-[11px] text-ink-faint">Always all sections</span>
+            ) : (
+              <span className="text-[11px] text-ink-faint">
+                {role._count.users} user{role._count.users === 1 ? "" : "s"}
+              </span>
+            )}
+          </div>
+        </div>
+        <SectionAccessGrid granted={granted} locked={locked} />
+        {error ? <p className="text-sm text-danger">{error}</p> : null}
+        {ok ? <p className="text-sm text-positive">{ok}</p> : null}
+        {!locked ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <Button type="submit" disabled={pending}>
+              {pending ? "Saving…" : "Save role"}
+            </Button>
+          </div>
+        ) : null}
+      </form>
+      {canDelete ? (
+        <form
+          action={deleteAction}
+          onSubmit={(event) => {
+            if (!confirm(`Delete role "${role.label}"?`)) {
+              event.preventDefault();
+            }
+          }}
+        >
+          <input type="hidden" name="roleId" value={role.id} />
+          <Button type="submit" variant="ghost" size="sm" disabled={deleting}>
+            {deleting ? "Deleting…" : "Delete role"}
+          </Button>
+        </form>
+      ) : !system && role._count.users > 0 ? (
+        <p className="text-[11px] text-ink-faint">
+          Reassign users before this role can be deleted.
+        </p>
+      ) : null}
+    </div>
   );
 }

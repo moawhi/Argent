@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 
 /**
  * Installs the bundled sample — spec, credentials, objects and a
- * dashboard — and drops the user straight onto the finished dashboard.
+ * site — and opens the Campaign hub.
  */
 export function LoadDemoButton({
   variant = "secondary",
@@ -37,7 +37,7 @@ export function LoadDemoButton({
               setError(outcome.error ?? "The demo could not be installed.");
               return;
             }
-            router.push(`/dashboards/${outcome.result!.dashboardSlug}`);
+            router.push(`/sites/${outcome.result!.dashboardSlug}`);
             router.refresh();
           });
         }}

@@ -2,18 +2,30 @@
 
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/server/db";
-import {
-  addWidget,
-  createDashboard,
-  saveLayout,
-} from "@/server/dashboards/service";
+import { createDashboard, saveLayout } from "@/server/dashboards/service";
 import type { Prisma } from "@prisma/client";
-import { requireAdmin, requireSection } from "@/server/auth/permissions";
+import { requireAdmin, ensureSiteEditor } from "@/server/auth/permissions";
 import { setDashboardAccess } from "@/server/auth/users";
 import { isDemoDashboardSlug } from "@/server/demo/access";
 
 function describeError(error: unknown): string {
   return error instanceof Error ? error.message : "Something went wrong.";
+}
+
+async function revalidateSitePaths(dashboardId: string) {
+  const dashboard = await prisma.dashboard.findUnique({
+    where: { id: dashboardId },
+    select: { slug: true },
+  });
+  revalidatePath("/sites");
+  revalidatePath("/dashboards");
+  revalidatePath("/");
+  if (dashboard) {
+    revalidatePath(`/sites/${dashboard.slug}`);
+    revalidatePath(`/dashboards/${dashboard.slug}`);
+    revalidatePath(`/dashboards/${dashboardId}`);
+    revalidatePath(`/view/${dashboard.slug}`);
+  }
 }
 
 export async function createDashboardAction(input: {
@@ -22,24 +34,10 @@ export async function createDashboardAction(input: {
   description?: string;
 }): Promise<{ ok: boolean; id?: string; slug?: string; error?: string }> {
   try {
-    await requireSection("dashboards");
+    await ensureSiteEditor();
     const dashboard = await createDashboard(input);
-    revalidatePath("/dashboards");
-    revalidatePath("/");
+    await revalidateSitePaths(dashboard.id);
     return { ok: true, id: dashboard.id, slug: dashboard.slug };
-  } catch (error) {
-    return { ok: false, error: describeError(error) };
-  }
-}
-
-export async function addWidgetAction(
-  dashboardId: string,
-  dataObjectId: string,
-): Promise<{ ok: boolean; error?: string }> {
-  try {
-    await addWidget(dashboardId, dataObjectId);
-    revalidatePath(`/dashboards/${dashboardId}`);
-    return { ok: true };
   } catch (error) {
     return { ok: false, error: describeError(error) };
   }
@@ -49,11 +47,12 @@ export async function removeWidgetAction(
   widgetId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    await ensureSiteEditor();
     const widget = await prisma.dashboardWidget.delete({
       where: { id: widgetId },
       select: { dashboardId: true },
     });
-    revalidatePath(`/dashboards/${widget.dashboardId}`);
+    await revalidateSitePaths(widget.dashboardId);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: describeError(error) };
@@ -65,6 +64,7 @@ export async function saveLayoutAction(
   layout: { id: string; x: number; y: number; w: number; h: number }[],
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    await ensureSiteEditor();
     await saveLayout(dashboardId, layout);
     return { ok: true };
   } catch (error) {
@@ -77,12 +77,13 @@ export async function updateWidgetAction(
   data: { title?: string | null; linkedWidgetId?: string | null },
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    await ensureSiteEditor();
     const widget = await prisma.dashboardWidget.update({
       where: { id: widgetId },
       data,
       select: { dashboardId: true },
     });
-    revalidatePath(`/dashboards/${widget.dashboardId}`);
+    await revalidateSitePaths(widget.dashboardId);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: describeError(error) };
@@ -95,12 +96,24 @@ export async function updateDashboardAction(
     name?: string;
     description?: string | null;
     filtersVisible?: boolean;
+    published?: boolean;
   },
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    await prisma.dashboard.update({ where: { id: dashboardId }, data });
-    revalidatePath(`/dashboards/${dashboardId}`);
-    revalidatePath("/dashboards");
+    await ensureSiteEditor();
+    await prisma.dashboard.update({
+      where: { id: dashboardId },
+      data: {
+        ...data,
+        publishedAt:
+          data.published === true
+            ? new Date()
+            : data.published === false
+              ? null
+              : undefined,
+      },
+    });
+    await revalidateSitePaths(dashboardId);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: describeError(error) };
@@ -111,7 +124,7 @@ export async function deleteDashboardAction(
   dashboardId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    await requireSection("dashboards");
+    await ensureSiteEditor();
     const dashboard = await prisma.dashboard.findUnique({
       where: { id: dashboardId },
       select: { id: true, slug: true },
@@ -124,6 +137,7 @@ export async function deleteDashboardAction(
     }
 
     await prisma.dashboard.delete({ where: { id: dashboardId } });
+    revalidatePath("/sites");
     revalidatePath("/dashboards");
     revalidatePath("/");
     return { ok: true };
@@ -145,6 +159,7 @@ export async function saveFilterAction(
   },
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    await ensureSiteEditor();
     const key = filter.key.trim().replace(/\s+/g, "_");
     if (!key) return { ok: false, error: "Parameter name is required." };
 
@@ -168,14 +183,14 @@ export async function saveFilterAction(
       });
     }
 
-    revalidatePath(`/dashboards/${dashboardId}`);
+    await revalidateSitePaths(dashboardId);
     return { ok: true };
   } catch (error) {
     const message = describeError(error);
     if (message.toLowerCase().includes("unique")) {
       return {
         ok: false,
-        error: "That parameter name is already used on this dashboard.",
+        error: "That parameter name is already used on this site.",
       };
     }
     return { ok: false, error: message };
@@ -186,11 +201,12 @@ export async function deleteFilterAction(
   filterId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   try {
+    await ensureSiteEditor();
     const filter = await prisma.globalFilter.delete({
       where: { id: filterId },
       select: { dashboardId: true },
     });
-    revalidatePath(`/dashboards/${filter.dashboardId}`);
+    await revalidateSitePaths(filter.dashboardId);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: describeError(error) };
@@ -204,8 +220,7 @@ export async function saveDashboardAccessAction(
   try {
     await requireAdmin();
     await setDashboardAccess(dashboardId, input);
-    revalidatePath("/dashboards");
-    revalidatePath(`/dashboards/${dashboardId}`);
+    await revalidateSitePaths(dashboardId);
     return { ok: true };
   } catch (error) {
     return { ok: false, error: describeError(error) };

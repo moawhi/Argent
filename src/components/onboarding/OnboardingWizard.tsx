@@ -48,8 +48,8 @@ const PRODUCT_STEPS = [
   },
   {
     icon: LayoutDashboard,
-    title: "Arrange a dashboard",
-    body: "Drop tiles on a grid, share filters across them, and keep large result sets paging smoothly.",
+    title: "Arrange a site",
+    body: "Pages, menus and tabs of tiles, with filters shared across them.",
   },
   {
     icon: ShieldCheck,
@@ -620,9 +620,9 @@ function McpConnectStep({ info }: { info: McpConnectInfo }) {
 
       <div className="flex flex-col gap-2">
         <Button
-          onClick={() => router.push(`/dashboards/${info.dashboardSlug}`)}
+          onClick={() => router.push(`/sites/${info.dashboardSlug}`)}
         >
-          Continue to dashboard
+          Continue to site
         </Button>
         <Link href={`/mcp/${info.serverId}`}>
           <Button variant="secondary" className="w-full">

@@ -7,6 +7,7 @@ import {
   filterViewableDashboards as filterDashboardsByGrant,
   getSessionUser,
   isAdmin,
+  canEditSites,
   type SessionUser,
 } from "@/server/auth/acl";
 import { canAccessConnection } from "@/server/auth/api-grants";
@@ -21,6 +22,7 @@ import type { AppSection } from "@/lib/auth/sections";
 
 export {
   canAccessSection,
+  canEditSites,
   getSessionUser,
   isAdmin,
   type SessionUser,
@@ -52,6 +54,7 @@ export async function filterViewableDashboards<
     id: string;
     slug?: string;
     connectionId?: string | null;
+    published?: boolean;
   },
 >(user: SessionUser, dashboards: T[]): Promise<T[]> {
   const byGrant = await filterDashboardsByGrant(user, dashboards);
@@ -109,5 +112,20 @@ export async function requireSection(
 export async function requireAdmin(): Promise<SessionUser> {
   const user = await requireUser();
   if (!isAdmin(user)) redirect("/?error=forbidden");
+  return user;
+}
+
+export async function requireSiteEditor(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!canEditSites(user)) redirect("/?error=forbidden");
+  return user;
+}
+
+/** For server actions: throws instead of redirecting so callers can return an error. */
+export async function ensureSiteEditor(): Promise<SessionUser> {
+  const user = await requireUser();
+  if (!canEditSites(user)) {
+    throw new Error("You don't have permission to edit sites.");
+  }
   return user;
 }

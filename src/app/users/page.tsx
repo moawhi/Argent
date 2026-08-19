@@ -45,7 +45,7 @@ export default async function UsersPage() {
     <>
       <PageHeader
         title="Users"
-        description="Manage people, roles, API access grants, and call activity."
+        description="Manage people, custom roles with section access, API grants, and call activity."
       />
       <PageBody>
         <UsersAdmin

@@ -77,6 +77,23 @@ export function canAccessSection(
   return user.roleSections.includes(section);
 }
 
+/** Sections that mean you can build and edit sites, not only view them. */
+const SITE_BUILDER_SECTIONS: AppSection[] = [
+  "objects",
+  "connections",
+  "explorer",
+  "requests",
+];
+
+/**
+ * Client (and any role with only Sites + Docs) can view published sites.
+ * Dev, Sales, and custom roles with builder sections can edit.
+ */
+export function canEditSites(user: SessionUser): boolean {
+  if (isAdmin(user)) return true;
+  return SITE_BUILDER_SECTIONS.some((section) => canAccessSection(user, section));
+}
+
 export async function canViewDashboard(
   user: SessionUser,
   dashboardId: string,
@@ -86,28 +103,32 @@ export async function canViewDashboard(
 
   const dashboard = await prisma.dashboard.findUnique({
     where: { id: dashboardId },
-    select: { id: true, slug: true },
+    select: { id: true, slug: true, published: true },
   });
   if (!dashboard) return false;
 
   if (isDemoDashboardSlug(dashboard.slug)) {
-    return canSeeDemo(user);
+    if (!canSeeDemo(user)) return false;
+  } else {
+    const grants = await prisma.dashboardGrant.findMany({
+      where: { dashboardId },
+    });
+
+    // No grants → open to anyone who can open the Dashboards section.
+    if (grants.length > 0) {
+      const allowed = grants.some(
+        (g) => g.userId === user.id || g.roleId === user.role.id,
+      );
+      if (!allowed) return false;
+    }
   }
 
-  const grants = await prisma.dashboardGrant.findMany({
-    where: { dashboardId },
-  });
-
-  // No grants → open to anyone who can open the Dashboards section.
-  if (grants.length === 0) return true;
-
-  return grants.some(
-    (g) => g.userId === user.id || g.roleId === user.role.id,
-  );
+  if (!canEditSites(user) && !dashboard.published) return false;
+  return true;
 }
 
 export async function filterViewableDashboards<
-  T extends { id: string; slug?: string },
+  T extends { id: string; slug?: string; published?: boolean },
 >(user: SessionUser, dashboards: T[]): Promise<T[]> {
   if (!canAccessSection(user, "dashboards")) return [];
   if (dashboards.length === 0) return [];
@@ -132,7 +153,7 @@ export async function filterViewableDashboards<
     byDashboard.set(g.dashboardId, list);
   }
 
-  return dashboards.filter((d) => {
+  const allowed = dashboards.filter((d) => {
     if (isDemoDashboardSlug(d.slug)) return showDemo;
 
     const list = byDashboard.get(d.id);
@@ -141,4 +162,7 @@ export async function filterViewableDashboards<
       (g) => g.userId === user.id || g.roleId === user.role.id,
     );
   });
+
+  if (canEditSites(user)) return allowed;
+  return allowed.filter((d) => d.published === true);
 }

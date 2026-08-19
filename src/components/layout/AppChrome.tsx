@@ -70,6 +70,7 @@ export function AppChrome({
     pathname === "/reset-password" ||
     pathname === "/verify-email" ||
     pathname === "/onboarding" ||
+    pathname.startsWith("/view") ||
     (!user && pathname === "/")
   ) {
     return <>{children}</>;

@@ -38,9 +38,9 @@ const STEPS: Step[] = [
   },
   {
     icon: LayoutDashboard,
-    title: "Arrange them on a dashboard",
+    title: "Arrange them on a site",
     body:
-      "Drag your tiles into place and resize them. A date range at the top of the page drives every tile at once, and you can link a table to a form so clicking a row fills the form in.",
+      "Add pages and a menu, drop tiles onto tabs, and share a date range across the site. You can link a table to a form so clicking a row fills the form in.",
   },
   {
     icon: ShieldCheck,
